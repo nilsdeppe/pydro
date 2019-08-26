@@ -63,8 +63,10 @@ def _compute_face_values_wcns3_(recons, v, i, j, k, dim_to_recons, scheme):
             C = np.asarray([0.25, 0.75])
         exponent = 2
         beta = np.asarray([(v[i] - v[i - 1])**2, (v[i + 1] - v[i])**2])
-        alpha_denom = np.asarray([(eps + beta[0]**exponent),
-                                  eps + beta[1]**exponent])
+        alpha_denom = np.asarray([
+            (eps * (1 + abs(v[i]) + abs(v[i - 1])) + beta[0])**exponent,
+            (eps * (1 + abs(v[i + 1]) + abs(v[i])) + beta[1])**exponent
+        ])
 
         alpha_l = C[::-1] / alpha_denom
         w_l = alpha_l / np.sum(alpha_l)
