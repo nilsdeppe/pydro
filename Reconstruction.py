@@ -18,6 +18,7 @@ class Scheme(enum.Enum):
     Weno3 = enum.auto()
     Wcns5 = enum.auto()
     Wcns5z = enum.auto()
+    Wcns5Weno = enum.auto()
 
 
 def _reconstruct_work_(u, extents, dim, ghost_zones, func, scheme):
@@ -88,8 +89,13 @@ def _reconstruct_wcns3(u, extents, dim, scheme):
 def _wcns5_impl_(recons, q, i, scheme):
     c = np.asarray([1.0 / 16.0, 10.0 / 16.0, 5.0 / 16.0])
     eps_machine = 2.0e-16
-    exponent = 16
-    if scheme == Scheme.Wcns5z:
+    exponent = 2
+    epsilon = np.asarray([
+        eps_machine * (1.0 + abs(q[0]) + abs(q[1]) + abs(q[2])),
+        eps_machine * (1.0 + abs(q[1]) + abs(q[2]) + abs(q[3])),
+        eps_machine * (1.0 + abs(q[2]) + abs(q[3]) + abs(q[4]))
+    ])
+    if scheme == Scheme.Wcns5z or scheme == Scheme.Wcns5Weno:
         beta = np.asarray(
             [(4.0 / 3.0) * q[0] * q[0] - (19.0 / 3.0) * q[0] * q[1] +
              (25.0 / 3.0) * q[1] * q[1] + (11.0 / 3.0) * q[0] * q[2] -
@@ -100,18 +106,21 @@ def _wcns5_impl_(recons, q, i, scheme):
              (10.0 / 3.0) * q[2] * q[2] - (31.0 / 3.0) * q[2] * q[3] +
              (25.0 / 3.0) * q[3] * q[3] + (11.0 / 3.0) * q[2] * q[4] -
              (19.0 / 3.0) * q[3] * q[4] + (4.0 / 3.0) * q[4] * q[4]])
-    else:
+
+    if scheme == Scheme.Wcns5z:
+        tau5 = abs(beta[2] - beta[0])
+        beta = np.asarray([
+            (beta[0] + epsilon[0]) / (beta[0] + tau5 + epsilon[0]),
+            (beta[1] + epsilon[1]) / (beta[1] + tau5 + epsilon[1]),
+            (beta[2] + epsilon[2]) / (beta[2] + tau5 + epsilon[2])
+        ])
+    elif scheme == Scheme.Wcns5:
         beta = np.asarray([
             0.25 * (q[0] - 4.0 * q[1] + 3.0 * q[2])**2 +
             (q[0] - 2.0 * q[1] + q[2])**2,
             0.25 * (q[1] - q[3])**2 + (q[1] - 2.0 * q[3])**2, 0.25 *
             (3.0 * q[2] - 4.0 * q[3] + q[4])**2 + (q[2] - 2.0 * q[3] + q[4])**2
         ])
-    epsilon = np.asarray([
-        eps_machine * (1.0 + abs(q[0]) + abs(q[1]) + abs(q[2])),
-        eps_machine * (1.0 + abs(q[1]) + abs(q[2]) + abs(q[3])),
-        eps_machine * (1.0 + abs(q[2]) + abs(q[3]) + abs(q[4]))
-    ])
 
     # Reconstruct left state
     alpha_l = c[::-1] / (beta + epsilon)**exponent
@@ -177,7 +186,8 @@ _recons_dispatch = {
     Scheme.Wcns3: _reconstruct_wcns3,
     Scheme.Weno3: _reconstruct_wcns3,
     Scheme.Wcns5: _reconstruct_wcns5,
-    Scheme.Wcns5z: _reconstruct_wcns5
+    Scheme.Wcns5z: _reconstruct_wcns5,
+    Scheme.Wcns5Weno: _reconstruct_wcns5
 }
 
 

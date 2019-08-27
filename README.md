@@ -16,6 +16,7 @@ The implemented numerical schemes are:
   * WCNS5 http://dx.doi.org/10.1016/j.compfluid.2012.09.001, and
     http://dx.doi.org/10.1016/j.compfluid.2015.08.023
   * WCNS5Z the WCNS5 scheme with the WENO5Z oscillation indicator
+  * WCNS5WENO the WCNS5 scheme with the standard WENO oscillation indicator
 - Derivatives:
   * Midpoint-to-node (MD) 2nd order
   * MD4 (4th order)
