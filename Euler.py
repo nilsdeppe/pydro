@@ -232,7 +232,8 @@ def take_step(reconsstruction_scheme, deriv_scheme, history, mass_density,
         deriv_scheme, dx, [nf_mass, nf_momentum, nf_energy],
         compute_flux(mass_density, momentum_density, energy_density)
         if deriv_scheme == Derivative.Scheme.MND4
-        or deriv_scheme == Derivative.Scheme.MND6 else None)
+        or deriv_scheme == Derivative.Scheme.MND6
+        or deriv_scheme == Derivative.Scheme.MNDV else None, order_used)
     dmass_dt *= -1
     dmomentum_dt *= -1
     denergy_dt *= -1
