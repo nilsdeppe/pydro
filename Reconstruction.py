@@ -21,13 +21,13 @@ class Scheme(enum.Enum):
     Wcns5Weno = enum.auto()
 
 
-def _reconstruct_work_(u, extents, dim, ghost_zones, func, scheme):
+def _reconstruct_work_(u, extents, dim, ghost_zones, func, scheme, order_used):
     recons = np.zeros(2 * len(u) + 2)
     # Reconstruction in x
     # || -- || -- || -- || -- || -- || -- ||
     # bn    ny    yy    yy    yy    yn    nb
     for i in range(ghost_zones[0], extents[0] - ghost_zones[0]):
-        func(recons, u, i, 0, 0, 0, scheme)
+        order_used[i] = min(func(recons, u, i, 0, 0, 0, scheme), order_used[i])
     return recons
 
 
@@ -43,12 +43,13 @@ def _compute_face_values_minmod_(recons, v, i, j, k, dim_to_recons, scheme):
             slope = b
         recons[2 * i + 1] = v[i] - 0.5 * slope
         recons[2 * i + 2] = v[i] + 0.5 * slope
+        return 2
 
 
-def _reconstruct_minmod(u, extents, dim, scheme):
+def _reconstruct_minmod(u, extents, dim, scheme, order_used):
     return np.asarray(
         _reconstruct_work(u, np.asarray(extents), dim, np.asarray([1]),
-                          _compute_face_values_minmod, scheme))
+                          _compute_face_values_minmod, scheme, order_used))
 
 
 def _compute_face_values_wcns3_(recons, v, i, j, k, dim_to_recons, scheme):
@@ -85,12 +86,13 @@ def _compute_face_values_wcns3_(recons, v, i, j, k, dim_to_recons, scheme):
         w_r1 = alpha_r1 / (alpha_r0 + alpha_r1)
         recons[2 * i + 2] = w_r0 * (1.5 * v[i] - 0.5 * v[i - 1]) + w_r1 * (
             0.5 * v[i] + 0.5 * v[i + 1])
+        return 3
 
 
-def _reconstruct_wcns3(u, extents, dim, scheme):
+def _reconstruct_wcns3(u, extents, dim, scheme, order_used):
     return np.asarray(
         _reconstruct_work(u, np.asarray(extents), dim, np.asarray([1]),
-                          _compute_face_values_wcns3, scheme))
+                          _compute_face_values_wcns3, scheme, order_used))
 
 
 def _wcns5_impl_(recons, q0, q1, q2, q3, q4, i, scheme):
@@ -149,6 +151,7 @@ def _wcns5_impl_(recons, q0, q1, q2, q3, q4, i, scheme):
     q_r2 = 0.375 * q2 + 0.75 * q3 - 0.125 * q4
 
     recons[2 * i + 2] = omega_r0 * q_r0 + omega_r1 * q_r1 + omega_r2 * q_r2
+    return 5
 
 
 def _compute_face_values_wcns5_(recons, q, i, j, k, dim_to_recons, scheme):
@@ -159,14 +162,14 @@ def _compute_face_values_wcns5_(recons, q, i, j, k, dim_to_recons, scheme):
     indicator is used.
     """
     if dim_to_recons == 0:
-        _wcns5_impl(recons, q[i - 2], q[i - 1], q[i], q[i + 1], q[i + 2], i,
-                    scheme)
+        return _wcns5_impl(recons, q[i - 2], q[i - 1], q[i], q[i + 1],
+                           q[i + 2], i, scheme)
 
 
-def _reconstruct_wcns5(u, extents, dim, scheme):
+def _reconstruct_wcns5(u, extents, dim, scheme, order_used):
     return np.asarray(
         _reconstruct_work(u, np.asarray(extents), dim, np.asarray([2]),
-                          _compute_face_values_wcns5, scheme))
+                          _compute_face_values_wcns5, scheme, order_used))
 
 
 if use_numba:
@@ -196,10 +199,10 @@ _recons_dispatch = {
 }
 
 
-def reconstruct(vars_to_reconstruct, scheme):
+def reconstruct(vars_to_reconstruct, scheme, order_used):
     reconstructed_vars = [None] * len(vars_to_reconstruct)
     for i in range(len(vars_to_reconstruct)):
         extents = np.asarray([len(vars_to_reconstruct[i])])
         reconstructed_vars[i] = _recons_dispatch[scheme](
-            vars_to_reconstruct[i], extents, 1, scheme)
+            vars_to_reconstruct[i], extents, 1, scheme, order_used)
     return reconstructed_vars

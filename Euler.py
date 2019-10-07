@@ -201,17 +201,18 @@ def compute_sources(radius, mass_density, momentum_density, energy_density):
 
 def take_step(reconsstruction_scheme, deriv_scheme, history, mass_density,
               momentum_density, energy_density, dt):
+    order_used = np.zeros(len(mass_density), dtype=int) + 100
     if reconstruct_prims:
         recons_mass, recons_velocity, recons_energy = recons.reconstruct([
             mass_density, momentum_density / mass_density,
             energy_density / mass_density
-        ], reconsstruction_scheme)
+        ], reconsstruction_scheme, order_used)
         recons_momentum = recons_velocity * recons_mass
         recons_energy *= recons_mass
     else:
         recons_mass, recons_momentum, recons_energy = recons.reconstruct(
             [mass_density, momentum_density, energy_density],
-            reconsstruction_scheme)
+            reconsstruction_scheme, order_used)
 
     bc_distance = 5
     recons_mass[0:bc_distance] = left_mass
