@@ -26,7 +26,7 @@ def _reconstruct_work_(u, extents, dim, ghost_zones, func, scheme, order_used):
     # Reconstruction in x
     # || -- || -- || -- || -- || -- || -- ||
     # bn    ny    yy    yy    yy    yn    nb
-    for i in range(ghost_zones[0], extents[0] - ghost_zones[0]):
+    for i in range(ghost_zones, extents[0] - ghost_zones):
         order_used[i] = min(func(recons, u, i, 0, 0, 0, scheme), order_used[i])
     return recons
 
@@ -48,8 +48,8 @@ def _compute_face_values_minmod_(recons, v, i, j, k, dim_to_recons, scheme):
 
 def _reconstruct_minmod(u, extents, dim, scheme, order_used):
     return np.asarray(
-        _reconstruct_work(u, np.asarray(extents), dim, np.asarray([1]),
-                          _compute_face_values_minmod, scheme, order_used))
+        _reconstruct_work(u, extents, dim, 1, _compute_face_values_minmod,
+                          scheme, order_used))
 
 
 def _compute_face_values_wcns3_(recons, v, i, j, k, dim_to_recons, scheme):
@@ -91,8 +91,8 @@ def _compute_face_values_wcns3_(recons, v, i, j, k, dim_to_recons, scheme):
 
 def _reconstruct_wcns3(u, extents, dim, scheme, order_used):
     return np.asarray(
-        _reconstruct_work(u, np.asarray(extents), dim, np.asarray([1]),
-                          _compute_face_values_wcns3, scheme, order_used))
+        _reconstruct_work(u, extents, dim, 1, _compute_face_values_wcns3,
+                          scheme, order_used))
 
 
 def _wcns5_impl_(recons, q0, q1, q2, q3, q4, i, scheme):
@@ -168,8 +168,9 @@ def _compute_face_values_wcns5_(recons, q, i, j, k, dim_to_recons, scheme):
 
 def _reconstruct_wcns5(u, extents, dim, scheme, order_used):
     return np.asarray(
-        _reconstruct_work(u, np.asarray(extents), dim, np.asarray([2]),
-                          _compute_face_values_wcns5, scheme, order_used))
+        _reconstruct_work(u, extents, dim, 2, _compute_face_values_wcns5,
+                          scheme, order_used))
+
 
 
 if use_numba:
@@ -204,5 +205,5 @@ def reconstruct(vars_to_reconstruct, scheme, order_used):
     for i in range(len(vars_to_reconstruct)):
         extents = np.asarray([len(vars_to_reconstruct[i])])
         reconstructed_vars[i] = _recons_dispatch[scheme](
-            vars_to_reconstruct[i], extents, 1, scheme, order_used)
-    return reconstructed_vars
+            vars_to_reconstruct[i], np.asarray(extents), 1, scheme, order_used)
+    return np.asarray(reconstructed_vars)
