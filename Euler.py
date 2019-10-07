@@ -1,7 +1,6 @@
 # copyright Nils Deppe 2019
 # (See accompanying file LICENSE.md or copy at http://boost.org/LICENSE_1_0.txt)
 
-import enum
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -14,6 +13,7 @@ except:
 import Reconstruction as recons
 import TimeStepper
 import Derivative
+import NewtonianEuler as ne
 
 mpl.rcParams['mathtext.fontset'] = 'cm'
 mpl.rcParams['mathtext.rm'] = 'serif'
@@ -22,14 +22,6 @@ mpl.rcParams['font.size'] = 12
 mpl.rcParams['legend.fontsize'] = 'large'
 mpl.rcParams['figure.titlesize'] = 'medium'
 
-
-@enum.unique
-class Symmetry(enum.Enum):
-    No = enum.auto()
-    Cylindrical = enum.auto()
-    Spherical = enum.auto()
-
-
 ################################################################
 # Configuration:
 problem = "strong"
@@ -37,7 +29,8 @@ iterations = 400
 num_cells = 400
 time_order = 2
 
-symmetry = Symmetry.No
+ne.set_symmetry(ne.Symmetry.No)
+ne.set_numerical_flux(ne.NumericalFlux.Hll)
 reconstruct_prims = True
 
 initial_position = 0.5
@@ -58,28 +51,8 @@ x = xmin + (np.arange(num_cells) + 0.5) * dx
 x_face = xmin + (np.arange(num_cells + 1)) * dx
 dt = cfl * dx
 
-if symmetry == Symmetry.No:
-    symmetry_alpha = int(0)
-elif symmetry == Symmetry.Cylindrical:
-    symmetry_alpha = int(1)
-elif symmetry == Symmetry.Spherical:
-    symmetry_alpha = int(2)
-else:
-    raise ValueError("Unknown symmetry option %s" % symmetry)
-
-gamma = 1.4
-
-
-def compute_pressure(mass_density, momentum_density, energy_density):
-    return (gamma - 1.0) * (energy_density -
-                            0.5 * momentum_density**2 / mass_density)
-
-
-def compute_energy_density(mass_density, momentum_density, pressure):
-    return pressure / (gamma - 1.0) + 0.5 * momentum_density**2 / mass_density
-
-
 if problem == "sod":
+    ne.set_gamma(1.4)
     left_mass = 1.0
     left_velocity = 0.0
     left_pressure = 1.0
@@ -87,6 +60,7 @@ if problem == "sod":
     right_velocity = 0.0
     right_pressure = 0.1
 elif problem == "lax":
+    ne.set_gamma(1.4)
     left_mass = 0.445
     left_velocity = 0.698
     left_pressure = 3.528
@@ -94,6 +68,7 @@ elif problem == "lax":
     right_velocity = 0.0
     right_pressure = 0.571
 elif problem == "strong":
+    ne.set_gamma(1.4)
     # https://iopscience.iop.org/article/10.1086/317361
     left_mass = 10.0
     left_velocity = 0.0
@@ -102,6 +77,7 @@ elif problem == "strong":
     right_velocity = 0.0
     right_pressure = 1.0
 elif problem == "123":
+    ne.set_gamma(1.4)
     left_mass = 1.0
     left_velocity = -2.0
     left_pressure = 0.4
@@ -109,6 +85,7 @@ elif problem == "123":
     right_velocity = 2.0
     right_pressure = 0.4
 elif problem == "severe shock":
+    ne.set_gamma(1.4)
     left_mass = 1.0
     left_velocity = 0.0
     left_pressure = 0.1 * PR
@@ -118,85 +95,12 @@ elif problem == "severe shock":
 
 left_momentum_density = left_mass * left_velocity
 right_momentum_density = right_mass * right_velocity
-left_energy_density = compute_energy_density(left_mass, left_momentum_density,
-                                             left_pressure)
-right_energy_density = compute_energy_density(right_mass,
-                                              right_momentum_density,
-                                              right_pressure)
-
-
-def compute_flux(mass_density, momentum_density, energy_density):
-    pressure = compute_pressure(mass_density, momentum_density, energy_density)
-    mass_density_flux = momentum_density
-    momentum_density_flux = momentum_density**2 / mass_density + pressure
-    energy_density_flux = (energy_density +
-                           pressure) * momentum_density / mass_density
-    return (mass_density_flux, momentum_density_flux, energy_density_flux)
-
-
-def compute_sound_speed(mass_density, press):
-    return np.sqrt(gamma * press / mass_density)
-
-
-def _nf_helper(lf_speed, mass_f, momentum_f, energy_f,
-               reconstructed_mass_density, reconstructed_momentum_density,
-               reconstructed_energy_density):
-    nf_mass = np.zeros(len(reconstructed_mass_density) // 2)
-    nf_momentum = np.zeros(len(reconstructed_mass_density) // 2)
-    nf_energy = np.zeros(len(reconstructed_mass_density) // 2)
-
-    for i in range(0, len(nf_mass), 1):
-        speed = max(lf_speed[2 * i + 1], lf_speed[2 * i])
-        nf_mass[i] = 0.5 * (mass_f[2 * i + 1] + mass_f[
-            2 * i]) - 0.5 * speed * (reconstructed_mass_density[2 * i + 1] -
-                                     reconstructed_mass_density[2 * i])
-        nf_momentum[i] = 0.5 * (momentum_f[2 * i + 1] +
-                                momentum_f[2 * i]) - 0.5 * speed * (
-                                    reconstructed_momentum_density[2 * i + 1] -
-                                    reconstructed_momentum_density[2 * i])
-        nf_energy[i] = 0.5 * (energy_f[2 * i + 1] + energy_f[
-            2 * i]) - 0.5 * speed * (reconstructed_energy_density[2 * i + 1] -
-                                     reconstructed_energy_density[2 * i])
-
-    return (nf_mass, nf_momentum, nf_energy)
-
-
-# If numba is present, JIT the nuumerical flux helper
-if use_numba:
-    nf_helper = nb.jit(nopython=True)(_nf_helper)
-else:
-    nf_helper = _nf_helper
-
-
-def compute_numerical_flux(mass_f, momentum_f, energy_f,
-                           reconstructed_mass_density,
-                           reconstructed_momentum_density,
-                           reconstructed_energy_density):
-
-    sound_speed = compute_sound_speed(
-        reconstructed_mass_density,
-        compute_pressure(reconstructed_mass_density,
-                         reconstructed_momentum_density,
-                         reconstructed_energy_density))
-
-    lf_speed = abs(reconstructed_momentum_density /
-                   reconstructed_mass_density) + sound_speed
-
-    return nf_helper(lf_speed, mass_f, momentum_f, energy_f,
-                     reconstructed_mass_density,
-                     reconstructed_momentum_density,
-                     reconstructed_energy_density)
-
-
-def compute_sources(radius, mass_density, momentum_density, energy_density):
-    """
-    Computes source terms for the symmetry.
-    """
-    factor = -symmetry_alpha / radius
-    pressure = compute_pressure(mass_density, momentum_density, energy_density)
-    return (factor * momentum_density,
-            factor * momentum_density**2 / mass_density, factor *
-            (energy_density + pressure) * momentum_density / mass_density)
+left_energy_density = ne.compute_energy_density(left_mass,
+                                                left_momentum_density,
+                                                left_pressure)
+right_energy_density = ne.compute_energy_density(right_mass,
+                                                 right_momentum_density,
+                                                 right_pressure)
 
 
 def take_step(reconsstruction_scheme, deriv_scheme, history, mass_density,
@@ -222,15 +126,15 @@ def take_step(reconsstruction_scheme, deriv_scheme, history, mass_density,
     recons_energy[0:bc_distance] = left_energy_density
     recons_energy[-bc_distance:] = right_energy_density
 
-    recons_mass_flux, recons_momentum_flux, recons_energy_flux = compute_flux(
-        recons_mass, recons_momentum, recons_energy)
-    nf_mass, nf_momentum, nf_energy = compute_numerical_flux(
+    recons_mass_flux, recons_momentum_flux, recons_energy_flux = ne.compute_flux(
+        [recons_mass, recons_momentum, recons_energy])
+    nf_mass, nf_momentum, nf_energy = ne.compute_numerical_flux(
         recons_mass_flux, recons_momentum_flux, recons_energy_flux,
         recons_mass, recons_momentum, recons_energy)
 
     dmass_dt, dmomentum_dt, denergy_dt = Derivative.differentiate_flux(
         deriv_scheme, dx, [nf_mass, nf_momentum, nf_energy],
-        compute_flux(mass_density, momentum_density, energy_density)
+        ne.compute_flux([mass_density, momentum_density, energy_density])
         if deriv_scheme == Derivative.Scheme.MND4
         or deriv_scheme == Derivative.Scheme.MND6
         or deriv_scheme == Derivative.Scheme.MNDV else None, order_used)
@@ -238,9 +142,9 @@ def take_step(reconsstruction_scheme, deriv_scheme, history, mass_density,
     dmomentum_dt *= -1
     denergy_dt *= -1
 
-    if symmetry_alpha != 0:
-        mass_source, momentum_source, energy_source = compute_sources(
-            x, mass_density, momentum_density, energy_density)
+    if ne.get_symmetry() != 0:
+        mass_source, momentum_source, energy_source = ne.compute_sources(
+            x, [mass_density, momentum_density, energy_density])
         dmass_dt = dmass_dt + mass_source
         dmomentum_dt = dmomentum_dt + momentum_source
         denergy_dt = denergy_dt + energy_source
