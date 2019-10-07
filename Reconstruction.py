@@ -59,24 +59,31 @@ def _compute_face_values_wcns3_(recons, v, i, j, k, dim_to_recons, scheme):
     if dim_to_recons == 0:
         eps = 1.0e-17
         if scheme == Scheme.Weno3:
-            C = np.asarray([1.0 / 3.0, 2.0 / 3.0])
+            C0 = 1.0 / 3.0
+            C1 = 2.0 / 3.0
         else:
-            C = np.asarray([0.25, 0.75])
+            C0 = 0.25
+            C1 = 0.75
         exponent = 2
-        beta = np.asarray([(v[i] - v[i - 1])**2, (v[i + 1] - v[i])**2])
-        alpha_denom = np.asarray([
-            (eps * (1 + abs(v[i]) + abs(v[i - 1])) + beta[0])**exponent,
-            (eps * (1 + abs(v[i + 1]) + abs(v[i])) + beta[1])**exponent
-        ])
+        beta0 = (v[i] - v[i - 1])**2
+        beta1 = (v[i + 1] - v[i])**2
+        alpha_denom0 = (eps * (1 + abs(v[i]) + abs(v[i - 1])) +
+                        beta0)**exponent
+        alpha_denom1 = (eps * (1 + abs(v[i + 1]) + abs(v[i])) +
+                        beta1)**exponent
 
-        alpha_l = C[::-1] / alpha_denom
-        w_l = alpha_l / np.sum(alpha_l)
-        recons[2 * i + 1] = w_l[0] * (0.5 * v[i] + 0.5 * v[i - 1]) + w_l[1] * (
+        alpha_l0 = C1 / alpha_denom0
+        alpha_l1 = C0 / alpha_denom1
+        w_l0 = alpha_l0 / (alpha_l0 + alpha_l1)
+        w_l1 = alpha_l1 / (alpha_l0 + alpha_l1)
+        recons[2 * i + 1] = w_l0 * (0.5 * v[i] + 0.5 * v[i - 1]) + w_l1 * (
             1.5 * v[i] - 0.5 * v[i + 1])
 
-        alpha_r = C / alpha_denom
-        w_r = alpha_r / np.sum(alpha_r)
-        recons[2 * i + 2] = w_r[0] * (1.5 * v[i] - 0.5 * v[i - 1]) + w_r[1] * (
+        alpha_r0 = C0 / alpha_denom0
+        alpha_r1 = C1 / alpha_denom1
+        w_r0 = alpha_r0 / (alpha_r0 + alpha_r1)
+        w_r1 = alpha_r1 / (alpha_r0 + alpha_r1)
+        recons[2 * i + 2] = w_r0 * (1.5 * v[i] - 0.5 * v[i - 1]) + w_r1 * (
             0.5 * v[i] + 0.5 * v[i + 1])
 
 
@@ -86,63 +93,62 @@ def _reconstruct_wcns3(u, extents, dim, scheme):
                           _compute_face_values_wcns3, scheme))
 
 
-def _wcns5_impl_(recons, q, i, scheme):
-    c = np.asarray([1.0 / 16.0, 10.0 / 16.0, 5.0 / 16.0])
+def _wcns5_impl_(recons, q0, q1, q2, q3, q4, i, scheme):
+    c0 = 1.0 / 16.0
+    c1 = 10.0 / 16.0
+    c2 = 5.0 / 16.0
     eps_machine = 2.0e-16
     exponent = 2
-    epsilon = np.asarray([
-        eps_machine * (1.0 + abs(q[0]) + abs(q[1]) + abs(q[2])),
-        eps_machine * (1.0 + abs(q[1]) + abs(q[2]) + abs(q[3])),
-        eps_machine * (1.0 + abs(q[2]) + abs(q[3]) + abs(q[4]))
-    ])
+    epsilon0 = eps_machine * (1.0 + abs(q0) + abs(q1) + abs(q2))
+    epsilon1 = eps_machine * (1.0 + abs(q1) + abs(q2) + abs(q3))
+    epsilon2 = eps_machine * (1.0 + abs(q2) + abs(q3) + abs(q4))
     if scheme == Scheme.Wcns5z or scheme == Scheme.Wcns5Weno:
-        beta = np.asarray(
-            [(4.0 / 3.0) * q[0] * q[0] - (19.0 / 3.0) * q[0] * q[1] +
-             (25.0 / 3.0) * q[1] * q[1] + (11.0 / 3.0) * q[0] * q[2] -
-             (31.0 / 3.0) * q[1] * q[2] + (10.0 / 3.0) * q[2] * q[2],
-             (4.0 / 3.0) * q[1] * q[1] - (13.0 / 3.0) * q[1] * q[2] +
-             (13.0 / 3.0) * q[2] * q[2] + (5.0 / 3.0) * q[1] * q[3] -
-             (13.0 / 3.0) * q[2] * q[3] + (4.0 / 3.0) * q[3] * q[3],
-             (10.0 / 3.0) * q[2] * q[2] - (31.0 / 3.0) * q[2] * q[3] +
-             (25.0 / 3.0) * q[3] * q[3] + (11.0 / 3.0) * q[2] * q[4] -
-             (19.0 / 3.0) * q[3] * q[4] + (4.0 / 3.0) * q[4] * q[4]])
+        beta0 = ((4.0 / 3.0) * q0 * q0 - (19.0 / 3.0) * q0 * q1 +
+                 (25.0 / 3.0) * q1 * q1 + (11.0 / 3.0) * q0 * q2 -
+                 (31.0 / 3.0) * q1 * q2 + (10.0 / 3.0) * q2 * q2)
+        beta1 = ((4.0 / 3.0) * q1 * q1 - (13.0 / 3.0) * q1 * q2 +
+                 (13.0 / 3.0) * q2 * q2 + (5.0 / 3.0) * q1 * q3 -
+                 (13.0 / 3.0) * q2 * q3 + (4.0 / 3.0) * q3 * q3)
+        beta2 = ((10.0 / 3.0) * q2 * q2 - (31.0 / 3.0) * q2 * q3 +
+                 (25.0 / 3.0) * q3 * q3 + (11.0 / 3.0) * q2 * q4 -
+                 (19.0 / 3.0) * q3 * q4 + (4.0 / 3.0) * q4 * q4)
 
     if scheme == Scheme.Wcns5z:
-        tau5 = abs(beta[2] - beta[0])
-        beta = np.asarray([
-            (beta[0] + epsilon[0]) / (beta[0] + tau5 + epsilon[0]),
-            (beta[1] + epsilon[1]) / (beta[1] + tau5 + epsilon[1]),
-            (beta[2] + epsilon[2]) / (beta[2] + tau5 + epsilon[2])
-        ])
+        tau5 = abs(beta2 - beta0)
+        beta0 = (beta0 + epsilon0) / (beta0 + tau5 + epsilon0)
+        beta1 = (beta1 + epsilon1) / (beta1 + tau5 + epsilon1)
+        beta2 = (beta2 + epsilon2) / (beta2 + tau5 + epsilon2)
+
     elif scheme == Scheme.Wcns5:
-        beta = np.asarray([
-            0.25 * (q[0] - 4.0 * q[1] + 3.0 * q[2])**2 +
-            (q[0] - 2.0 * q[1] + q[2])**2,
-            0.25 * (q[1] - q[3])**2 + (q[1] - 2.0 * q[3])**2, 0.25 *
-            (3.0 * q[2] - 4.0 * q[3] + q[4])**2 + (q[2] - 2.0 * q[3] + q[4])**2
-        ])
+        beta0 = 0.25 * (q0 - 4.0 * q1 + 3.0 * q2)**2 + (q0 - 2.0 * q1 + q2)**2
+        beta1 = 0.25 * (q1 - q3)**2 + (q1 - 2.0 * q3)**2
+        beta2 = 0.25 * (3.0 * q2 - 4.0 * q3 + q4)**2 + (q2 - 2.0 * q3 + q4)**2
 
     # Reconstruct left state
-    alpha_l = c[::-1] / (beta + epsilon)**exponent
-    omega_l = alpha_l / np.sum(alpha_l)
-    q_l = np.asarray([
-        -0.125 * q[0] + 0.75 * q[1] + 0.375 * q[2],
-        0.375 * q[1] + 0.75 * q[2] - 0.125 * q[3],
-        1.875 * q[2] - 1.25 * q[3] + 0.375 * q[4]
-    ])
+    alpha_l0 = c2 / (beta0 + epsilon0)**exponent
+    alpha_l1 = c1 / (beta1 + epsilon1)**exponent
+    alpha_l2 = c0 / (beta2 + epsilon2)**exponent
+    omega_l0 = alpha_l0 / (alpha_l0 + alpha_l1 + alpha_l2)
+    omega_l1 = alpha_l1 / (alpha_l0 + alpha_l1 + alpha_l2)
+    omega_l2 = alpha_l2 / (alpha_l0 + alpha_l1 + alpha_l2)
+    q_l0 = -0.125 * q0 + 0.75 * q1 + 0.375 * q2
+    q_l1 = 0.375 * q1 + 0.75 * q2 - 0.125 * q3
+    q_l2 = 1.875 * q2 - 1.25 * q3 + 0.375 * q4
 
-    recons[2 * i + 1] = np.sum(omega_l * q_l)
+    recons[2 * i + 1] = omega_l0 * q_l0 + omega_l1 * q_l1 + omega_l2 * q_l2
 
     # Reconstruct right state
-    alpha_r = c / (beta + epsilon)**exponent
-    omega_r = alpha_r / np.sum(alpha_r)
-    q_r = np.asarray([
-        0.375 * q[0] - 1.25 * q[1] + 1.875 * q[2],
-        -0.125 * q[1] + 0.75 * q[2] + 0.375 * q[3],
-        0.375 * q[2] + 0.75 * q[3] - 0.125 * q[4]
-    ])
+    alpha_r0 = c0 / (beta0 + epsilon0)**exponent
+    alpha_r1 = c1 / (beta1 + epsilon1)**exponent
+    alpha_r2 = c2 / (beta2 + epsilon2)**exponent
+    omega_r0 = alpha_r0 / (alpha_r0 + alpha_r1 + alpha_r2)
+    omega_r1 = alpha_r1 / (alpha_r0 + alpha_r1 + alpha_r2)
+    omega_r2 = alpha_r2 / (alpha_r0 + alpha_r1 + alpha_r2)
+    q_r0 = 0.375 * q0 - 1.25 * q1 + 1.875 * q2
+    q_r1 = -0.125 * q1 + 0.75 * q2 + 0.375 * q3
+    q_r2 = 0.375 * q2 + 0.75 * q3 - 0.125 * q4
 
-    recons[2 * i + 2] = np.sum(omega_r * q_r)
+    recons[2 * i + 2] = omega_r0 * q_r0 + omega_r1 * q_r1 + omega_r2 * q_r2
 
 
 def _compute_face_values_wcns5_(recons, q, i, j, k, dim_to_recons, scheme):
@@ -153,9 +159,8 @@ def _compute_face_values_wcns5_(recons, q, i, j, k, dim_to_recons, scheme):
     indicator is used.
     """
     if dim_to_recons == 0:
-        _wcns5_impl(recons,
-                    np.asarray([q[i - 2], q[i - 1], q[i], q[i + 1], q[i + 2]]),
-                    i, scheme)
+        _wcns5_impl(recons, q[i - 2], q[i - 1], q[i], q[i + 1], q[i + 2], i,
+                    scheme)
 
 
 def _reconstruct_wcns5(u, extents, dim, scheme):
