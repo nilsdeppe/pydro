@@ -7,7 +7,7 @@ import Derivative
 
 
 class Rk3Ssp:
-    _time_deriv = None
+    _compute_time_deriv = None
     _x = None
     _dx = None
     _evolved_vars = None
@@ -22,7 +22,7 @@ class Rk3Ssp:
 
     def __init__(self, time_deriv, x, reconstructor, reconstruction_scheme,
                  deriv_scheme, initial_state, initial_time):
-        self._time_deriv = time_deriv
+        self._compute_time_deriv = time_deriv
         self._x = np.copy(x)
         self._dx = x[1] - x[0]
         self._evolved_vars = np.copy(initial_state)
@@ -69,13 +69,14 @@ class Rk3Ssp:
 
     def take_step(self, dt):
         self._reset_order_used()
-        dt_vars = self._time_deriv(self, self._evolved_vars, self._time)
+        dt_vars = self._compute_time_deriv(self, self._evolved_vars,
+                                           self._time)
         v1 = self._evolved_vars + dt * dt_vars
         self._reset_order_used()
-        dt_vars = dt_vars = self._time_deriv(self, v1, self._time + dt)
+        dt_vars = dt_vars = self._compute_time_deriv(self, v1, self._time + dt)
         v2 = 0.25 * (3.0 * self._evolved_vars + v1 + dt * dt_vars)
         self._reset_order_used()
-        dt_vars = self._time_deriv(self, v2, self._time + 0.5 * dt)
+        dt_vars = self._compute_time_deriv(self, v2, self._time + 0.5 * dt)
         self._evolved_vars = 1.0 / 3.0 * (self._evolved_vars + 2.0 * v2 +
                                           2.0 * dt * dt_vars)
         self._time += dt
