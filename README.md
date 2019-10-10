@@ -7,7 +7,8 @@ be JITed for better performance.
 
 The implemented numerical schemes are:
 - Time steppers:
-  * Adams-Bashforth 1, 2, 3, or 4
+  * RK3 Strong-Stability-Preserving (SSP)
+  * Adams-Bashforth 1, 2, 3, or 4 (not fully working)
 - Reconstruction:
   * Minmod
   * WCNS3 (weighted compact nonlinear scheme)

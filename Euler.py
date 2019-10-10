@@ -25,7 +25,7 @@ mpl.rcParams['figure.titlesize'] = 'medium'
 ################################################################
 # Configuration:
 problem = "strong"
-iterations = 400
+final_time = 0.1
 num_cells = 400
 time_order = 2
 
@@ -35,21 +35,29 @@ reconstruct_prims = True
 
 initial_position = 0.5
 
-PR = 4000.0
+PR = 1000.0
 xmin = 0.0
 xmax = 1.0
 tmax = 0.2
-cfl = 0.05
+cfl = 0.2
 # End configuration
 ################################################################
 
-num_faces = num_cells + 1
-num_interfaces = 2 * (num_faces)
-plt.clf()
-dx = (xmax - xmin) / num_cells
-x = xmin + (np.arange(num_cells) + 0.5) * dx
-x_face = xmin + (np.arange(num_cells + 1)) * dx
-dt = cfl * dx
+
+def init_grid():
+    global num_faces
+    global num_interfaces
+    global dx
+    global x
+    global x_face
+    global dt
+    num_faces = num_cells + 1
+    num_interfaces = 2 * (num_faces)
+    dx = (xmax - xmin) / num_cells
+    print("Global dx: ", dx)
+    x = xmin + (np.arange(num_cells) + 0.5) * dx
+    x_face = xmin + (np.arange(num_cells + 1)) * dx
+
 
 if problem == "sod":
     ne.set_gamma(1.4)
@@ -103,57 +111,6 @@ right_energy_density = ne.compute_energy_density(right_mass,
                                                  right_pressure)
 
 
-def take_step(reconsstruction_scheme, deriv_scheme, history, mass_density,
-              momentum_density, energy_density, dt):
-    order_used = np.zeros(len(mass_density), dtype=int) + 100
-    if reconstruct_prims:
-        recons_mass, recons_velocity, recons_energy = recons.reconstruct([
-            mass_density, momentum_density / mass_density,
-            energy_density / mass_density
-        ], reconsstruction_scheme, order_used)
-        recons_momentum = recons_velocity * recons_mass
-        recons_energy *= recons_mass
-    else:
-        recons_mass, recons_momentum, recons_energy = recons.reconstruct(
-            [mass_density, momentum_density, energy_density],
-            reconsstruction_scheme, order_used)
-
-    bc_distance = 5
-    recons_mass[0:bc_distance] = left_mass
-    recons_mass[-bc_distance:] = right_mass
-    recons_momentum[0:bc_distance] = left_momentum_density
-    recons_momentum[-bc_distance:] = right_momentum_density
-    recons_energy[0:bc_distance] = left_energy_density
-    recons_energy[-bc_distance:] = right_energy_density
-
-    recons_mass_flux, recons_momentum_flux, recons_energy_flux = ne.compute_flux(
-        [recons_mass, recons_momentum, recons_energy])
-    nf_mass, nf_momentum, nf_energy = ne.compute_numerical_flux(
-        recons_mass_flux, recons_momentum_flux, recons_energy_flux,
-        recons_mass, recons_momentum, recons_energy)
-
-    dmass_dt, dmomentum_dt, denergy_dt = Derivative.differentiate_flux(
-        deriv_scheme, dx, [nf_mass, nf_momentum, nf_energy],
-        ne.compute_flux([mass_density, momentum_density, energy_density])
-        if deriv_scheme == Derivative.Scheme.MND4
-        or deriv_scheme == Derivative.Scheme.MND6
-        or deriv_scheme == Derivative.Scheme.MNDV else None, order_used)
-    dmass_dt *= -1
-    dmomentum_dt *= -1
-    denergy_dt *= -1
-
-    if ne.get_symmetry() != 0:
-        mass_source, momentum_source, energy_source = ne.compute_sources(
-            x, [mass_density, momentum_density, energy_density])
-        dmass_dt = dmass_dt + mass_source
-        dmomentum_dt = dmomentum_dt + momentum_source
-        denergy_dt = denergy_dt + energy_source
-
-    return TimeStepper.adams_bashforth(
-        time_order, history, [mass_density, momentum_density, energy_density],
-        [dmass_dt, dmomentum_dt, denergy_dt], dt)
-
-
 def set_initial_data():
     time = 0.0
     mass_density = np.full(len(x), left_mass)
@@ -167,22 +124,51 @@ def set_initial_data():
     return (time, mass_density, momentum_density, energy_density)
 
 
-frequency = iterations / 10
+def time_deriv(stepper, evolved_vars, time):
+    primitive_vars = None
+    primitive_vars = ne.compute_primitives(primitive_vars, evolved_vars)
+    recons_prim = stepper.reconstruct_variables(primitive_vars)
+    recons_conserved = ne.compute_conserved(recons_prim)
+
+    numerical_fluxes_at_faces = ne.compute_numerical_flux(recons_conserved)
+
+    dt_evolved_vars = -1.0 * stepper.flux_deriv(numerical_fluxes_at_faces,
+                                                ne.compute_flux(evolved_vars))
+
+    bc_distance = 7
+    # zero time derivs at boundary
+    for i in range(len(dt_evolved_vars)):
+        dt_evolved_vars[i][0:bc_distance] = 0.0
+        dt_evolved_vars[i][-bc_distance:] = 0.0
+    return dt_evolved_vars
 
 
-def do_solve(reconsstruction_scheme, deriv_scheme):
-    history = []
+def do_solve(reconstruction_scheme, deriv_scheme):
+    init_grid()
+
     time, mass_density, momentum_density, energy_density = set_initial_data()
-    for i in range(iterations):
-        time += dt
-        mass_density, momentum_density, energy_density = take_step(
-            reconsstruction_scheme, deriv_scheme, history, mass_density,
-            momentum_density, energy_density, dt)
-        # if i % frequency == 0:
-        #     c = 1.0 - (0.1 + (i / frequency) * 0.1)
-        #     plt.plot(x, mass_density, ls=":", color=str(c), zorder=-1)
+    stepper = TimeStepper.Rk3Ssp(
+        time_deriv, x, recons.reconstruct, reconstruction_scheme, deriv_scheme,
+        np.asarray([mass_density, momentum_density, energy_density]), time)
+    while stepper.get_time() <= final_time:
+        mass_density, momentum_density, energy_density = stepper.get_evolved_vars(
+        )
+        sound_speed = ne.compute_sound_speed(
+            mass_density,
+            ne.compute_pressure(mass_density, momentum_density,
+                                energy_density))
+        speed = np.amax(np.abs(momentum_density / mass_density) + sound_speed)
+        dt = cfl * stepper.get_dx() / speed
+        if stepper.get_time() + dt > final_time:
+            dt = final_time - stepper.get_time()
+            stepper.take_step(dt)
+            break
+        stepper.take_step(dt)
 
-    return (time, mass_density, momentum_density, energy_density)
+    mass_density, momentum_density, energy_density = stepper.get_evolved_vars()
+    global global_order_used
+    global_order_used = stepper.get_order_used()
+    return (stepper.get_time(), mass_density, momentum_density, energy_density)
 
 
 print("Starting solves...")

@@ -142,10 +142,13 @@ else:
     hll_helper = _hll_helper
 
 
-def compute_numerical_flux(mass_f, momentum_f, energy_f,
-                           reconstructed_mass_density,
-                           reconstructed_momentum_density,
-                           reconstructed_energy_density):
+def compute_numerical_flux(recons_evolved_vars):
+
+    mass_f, momentum_f, energy_f = compute_flux(recons_evolved_vars)
+
+    reconstructed_mass_density = recons_evolved_vars[0]
+    reconstructed_momentum_density = recons_evolved_vars[1]
+    reconstructed_energy_density = recons_evolved_vars[2]
 
     sound_speed = compute_sound_speed(
         reconstructed_mass_density,
