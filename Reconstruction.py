@@ -19,6 +19,7 @@ class Scheme(enum.Enum):
     Wcns5 = enum.auto()
     Wcns5z = enum.auto()
     Wcns5Weno = enum.auto()
+    Mp5 = enum.auto()
 
 
 def _reconstruct_work_(u, extents, dim, ghost_zones, func, scheme, order_used):
@@ -172,6 +173,66 @@ def _reconstruct_wcns5(u, extents, dim, scheme, order_used):
                           scheme, order_used))
 
 
+def _reconstruct_mp5(u, extents, dim, scheme, order_used):
+    return np.asarray(
+        _reconstruct_work(u, extents, dim, 2, _compute_face_values_mp5, scheme,
+                          order_used))
+
+
+def _mp5_impl_(recons, q, i, scheme):
+    def minmod(a, b):
+        if a * b < 0.0:
+            return 0.0
+        if abs(a) < abs(b):
+            return a
+        else:
+            return b
+
+    def median(a, b, c):
+        return a + minmod(b - a, c - a)
+
+    alpha = 4.0
+
+    j = 2
+    d_jm1 = q[j - 2] + q[j] - 2.0 * q[j - 1]
+    d_j = q[j - 1] + q[j + 1] - 2.0 * q[j]
+    d_jp1 = q[j] + q[j + 2] - 2.0 * q[j + 1]
+    d_mmm = minmod(d_j, d_jm1)
+    d_mmp = minmod(d_j, d_jp1)
+
+    # Reconstruct left state
+    q_av = 0.5 * (q[j - 1] + q[j])
+    q_fl = q_av - 0.5 * d_j
+    q_md = q_av - 0.5 * d_mmm
+    q_ul = q[j] + alpha * (q[j] + q[j + 1])
+    q_lc = q_fl + 4. / 3. * d_mmp
+    q_min = max(min(min(q[j], q[j + 1]), q_md), min(min(q[j], q_ul), q_lc))
+    q_max = min(max(max(q[j], q[j + 1]), q_md), max(max(q[j], q_ul), q_lc))
+    q_l = (-3.0 * q[j - 2] + 27.0 * q[j - 1] + 47.0 * q[j] - 13.0 * q[j + 1] +
+           2.0 * q[j - 2]) / 60.0
+    recons[2 * i + 1] = median(q_l, q_min, q_max)
+
+    # Reconstruct right state
+    q_av = 0.5 * (q[j] + q[j + 1])
+    q_fl = q_av - 0.5 * d_j
+    # q_fr = q_av - 0.5 * d_ip1
+    q_md = q_av - 0.5 * d_mmp
+    q_ul = q[j] + alpha * (q[j] - q[j - 1])
+    q_lc = q_fl + 4. / 3. * d_mmm
+    q_min = max(min(min(q[j], q[j + 1]), q_md), min(min(q[j], q_ul), q_lc))
+    q_max = min(max(max(q[j], q[j + 1]), q_md), max(max(q[j], q_ul), q_lc))
+    q_r = (2.0 * q[j - 2] - 13.0 * q[j - 1] + 47.0 * q[j] + 27.0 * q[j + 1] -
+           3.0 * q[j + 2]) / 60.0
+    recons[2 * i + 2] = median(q_r, q_min, q_max)
+    return 5
+
+
+def _compute_face_values_mp5_(recons, q, i, j, k, dim_to_recons, scheme):
+    if dim_to_recons == 0:
+        _mp5_impl(recons,
+                  np.asarray([q[i - 2], q[i - 1], q[i], q[i + 1], q[i + 2]]),
+                  i, scheme)
+
 
 if use_numba:
     _reconstruct_work = nb.jit(nopython=True)(_reconstruct_work_)
@@ -182,6 +243,8 @@ if use_numba:
     _wcns5_impl = nb.jit(nopython=True)(_wcns5_impl_)
     _compute_face_values_wcns5 = nb.jit(
         nopython=True)(_compute_face_values_wcns5_)
+    _mp5_impl = nb.jit(nopython=True)(_mp5_impl_)
+    _compute_face_values_mp5 = nb.jit(nopython=True)(_compute_face_values_mp5_)
 else:
     print("Please install Numba for better performance.")
     _reconstruct_work = _reconstruct_work_
@@ -189,6 +252,8 @@ else:
     _compute_face_values_wcns3 = _compute_face_values_wcns3_
     _wcns5_impl = _wcns5_impl_
     _compute_face_values_wcns5 = _compute_face_values_wcns5_
+    _mp5_impl = _mp5_impl_
+    _compute_face_values_mp5 = _compute_face_values_mp5_
 
 _recons_dispatch = {
     Scheme.Minmod: _reconstruct_minmod,
@@ -196,7 +261,8 @@ _recons_dispatch = {
     Scheme.Weno3: _reconstruct_wcns3,
     Scheme.Wcns5: _reconstruct_wcns5,
     Scheme.Wcns5z: _reconstruct_wcns5,
-    Scheme.Wcns5Weno: _reconstruct_wcns5
+    Scheme.Wcns5Weno: _reconstruct_wcns5,
+    Scheme.Mp5: _reconstruct_mp5,
 }
 
 
