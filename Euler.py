@@ -125,10 +125,13 @@ def set_initial_data():
 
 
 def time_deriv(stepper, evolved_vars, time):
-    primitive_vars = None
-    primitive_vars = ne.compute_primitives(primitive_vars, evolved_vars)
-    recons_prim = stepper.reconstruct_variables(primitive_vars)
-    recons_conserved = ne.compute_conserved(recons_prim)
+    if reconstruct_prims:
+        primitive_vars = None
+        primitive_vars = ne.compute_primitives(primitive_vars, evolved_vars)
+        recons_prim = stepper.reconstruct_variables(primitive_vars)
+        recons_conserved = ne.compute_conserved(recons_prim)
+    else:
+        recons_conserved = stepper.reconstruct_variables(evolved_vars)
 
     numerical_fluxes_at_faces = ne.compute_numerical_flux(recons_conserved)
 
