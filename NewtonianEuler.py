@@ -156,7 +156,7 @@ def set_initial_data(x, initial_data, discontinuity_location):
         elif initial_data == InitialData.Mach1200:
             set_gamma(5. / 3.)
             left_mass = 1.0
-            left_velocity = 4 * 3200.0  # 400
+            left_velocity = 400
             left_pressure = (2. / 3.) * 1e-1
             right_mass = 10.0
             right_velocity = 0.0
