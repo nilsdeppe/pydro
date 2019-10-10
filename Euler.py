@@ -100,27 +100,63 @@ elif problem == "severe shock":
     right_mass = 1.0
     right_velocity = 0.0
     right_pressure = 0.1
+elif problem == "LeBlanc":
+    ne.set_gamma(5. / 3.)
+    left_mass = 1.0
+    left_velocity = 0.0
+    left_pressure = (2. / 3.) * 1e-1
+    right_mass = 10.0  # 1.0e-10  # 1.0e-3
+    right_mass = 1.0e-3
+    right_velocity = 0.0
+    right_pressure = (2. / 3.) * 1e-10  # (2. / 3.) * 1e-10
+elif problem == "LeBlancMach1200":
+    ne.set_gamma(5. / 3.)
+    left_mass = 1.0
+    left_velocity = 4 * 3200.0  # 400
+    left_pressure = (2. / 3.) * 1e-1
+    right_mass = 10.0
+    right_velocity = 0.0
+    right_pressure = (2. / 3.) * 1e-15
 
-left_momentum_density = left_mass * left_velocity
-right_momentum_density = right_mass * right_velocity
-left_energy_density = ne.compute_energy_density(left_mass,
-                                                left_momentum_density,
-                                                left_pressure)
-right_energy_density = ne.compute_energy_density(right_mass,
-                                                 right_momentum_density,
-                                                 right_pressure)
+if problem != "ShuOsherTube":
+    left_momentum_density = left_mass * left_velocity
+    right_momentum_density = right_mass * right_velocity
+    left_energy_density = ne.compute_energy_density(left_mass,
+                                                    left_momentum_density,
+                                                    left_pressure)
+    right_energy_density = ne.compute_energy_density(right_mass,
+                                                     right_momentum_density,
+                                                     right_pressure)
+
 
 
 def set_initial_data():
     time = 0.0
-    mass_density = np.full(len(x), left_mass)
-    mass_density[x > initial_position] = right_mass
 
-    momentum_density = np.full(len(x), left_momentum_density)
-    momentum_density[x > initial_position] = right_momentum_density
+    if problem == "ShuOsherTube":
+        ne.set_gamma(1.4)
+        jump_mask = x > initial_position - 1.0e-10
+        mass_density = np.full(len(x), 3.857143)
+        mass_density[jump_mask] = 1.0 + 0.2 * np.sin(5.0 * x[jump_mask])
 
-    energy_density = np.full(len(x), left_energy_density)
-    energy_density[x > initial_position] = right_energy_density
+        pressure = np.full(len(x), 10.33333)
+        pressure[jump_mask] = 1.0
+
+        velocity = np.full(len(x), 2.629369)
+        velocity[jump_mask] = 0.0
+
+        momentum_density = mass_density * velocity
+        energy_density = ne.compute_energy_density(mass_density,
+                                                   momentum_density, pressure)
+    else:
+        mass_density = np.full(len(x), left_mass)
+        mass_density[x > initial_position] = right_mass
+
+        momentum_density = np.full(len(x), left_momentum_density)
+        momentum_density[x > initial_position] = right_momentum_density
+
+        energy_density = np.full(len(x), left_energy_density)
+        energy_density[x > initial_position] = right_energy_density
     return (time, mass_density, momentum_density, energy_density)
 
 
