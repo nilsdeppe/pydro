@@ -71,6 +71,9 @@ def time_deriv(stepper, evolved_vars, time):
     dt_evolved_vars = -1.0 * stepper.flux_deriv(numerical_fluxes_at_faces,
                                                 ne.compute_flux(evolved_vars))
 
+    if ne.get_symmetry() != 0:
+        dt_evolved_vars += ne.compute_sources(stepper.get_x(), evolved_vars)
+
     bc_distance = 7
     # zero time derivs at boundary
     for i in range(len(dt_evolved_vars)):

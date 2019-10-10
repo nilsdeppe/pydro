@@ -48,6 +48,9 @@ class Rk3Ssp:
     def get_time(self):
         return self._time
 
+    def get_x(self):
+        return self._x
+
     def get_order_used(self):
         return self._order_used
 
