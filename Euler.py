@@ -24,10 +24,9 @@ mpl.rcParams['figure.titlesize'] = 'medium'
 
 ################################################################
 # Configuration:
-problem = "strong"
+problem = ne.InitialData.Severe1
 final_time = 0.1
 num_cells = 400
-time_order = 2
 
 ne.set_symmetry(ne.Symmetry.No)
 ne.set_numerical_flux(ne.NumericalFlux.Hll)
@@ -35,7 +34,6 @@ reconstruct_prims = True
 
 initial_position = 0.5
 
-PR = 1000.0
 xmin = 0.0
 xmax = 1.0
 tmax = 0.2
@@ -57,107 +55,6 @@ def init_grid():
     print("Global dx: ", dx)
     x = xmin + (np.arange(num_cells) + 0.5) * dx
     x_face = xmin + (np.arange(num_cells + 1)) * dx
-
-
-if problem == "sod":
-    ne.set_gamma(1.4)
-    left_mass = 1.0
-    left_velocity = 0.0
-    left_pressure = 1.0
-    right_mass = 0.125
-    right_velocity = 0.0
-    right_pressure = 0.1
-elif problem == "lax":
-    ne.set_gamma(1.4)
-    left_mass = 0.445
-    left_velocity = 0.698
-    left_pressure = 3.528
-    right_mass = 0.5
-    right_velocity = 0.0
-    right_pressure = 0.571
-elif problem == "strong":
-    ne.set_gamma(1.4)
-    # https://iopscience.iop.org/article/10.1086/317361
-    left_mass = 10.0
-    left_velocity = 0.0
-    left_pressure = 100.0
-    right_mass = 1.0
-    right_velocity = 0.0
-    right_pressure = 1.0
-elif problem == "123":
-    ne.set_gamma(1.4)
-    left_mass = 1.0
-    left_velocity = -2.0
-    left_pressure = 0.4
-    right_mass = 1.0
-    right_velocity = 2.0
-    right_pressure = 0.4
-elif problem == "severe shock":
-    ne.set_gamma(1.4)
-    left_mass = 1.0
-    left_velocity = 0.0
-    left_pressure = 0.1 * PR
-    right_mass = 1.0
-    right_velocity = 0.0
-    right_pressure = 0.1
-elif problem == "LeBlanc":
-    ne.set_gamma(5. / 3.)
-    left_mass = 1.0
-    left_velocity = 0.0
-    left_pressure = (2. / 3.) * 1e-1
-    right_mass = 10.0  # 1.0e-10  # 1.0e-3
-    right_mass = 1.0e-3
-    right_velocity = 0.0
-    right_pressure = (2. / 3.) * 1e-10  # (2. / 3.) * 1e-10
-elif problem == "LeBlancMach1200":
-    ne.set_gamma(5. / 3.)
-    left_mass = 1.0
-    left_velocity = 4 * 3200.0  # 400
-    left_pressure = (2. / 3.) * 1e-1
-    right_mass = 10.0
-    right_velocity = 0.0
-    right_pressure = (2. / 3.) * 1e-15
-
-if problem != "ShuOsherTube":
-    left_momentum_density = left_mass * left_velocity
-    right_momentum_density = right_mass * right_velocity
-    left_energy_density = ne.compute_energy_density(left_mass,
-                                                    left_momentum_density,
-                                                    left_pressure)
-    right_energy_density = ne.compute_energy_density(right_mass,
-                                                     right_momentum_density,
-                                                     right_pressure)
-
-
-
-def set_initial_data():
-    time = 0.0
-
-    if problem == "ShuOsherTube":
-        ne.set_gamma(1.4)
-        jump_mask = x > initial_position - 1.0e-10
-        mass_density = np.full(len(x), 3.857143)
-        mass_density[jump_mask] = 1.0 + 0.2 * np.sin(5.0 * x[jump_mask])
-
-        pressure = np.full(len(x), 10.33333)
-        pressure[jump_mask] = 1.0
-
-        velocity = np.full(len(x), 2.629369)
-        velocity[jump_mask] = 0.0
-
-        momentum_density = mass_density * velocity
-        energy_density = ne.compute_energy_density(mass_density,
-                                                   momentum_density, pressure)
-    else:
-        mass_density = np.full(len(x), left_mass)
-        mass_density[x > initial_position] = right_mass
-
-        momentum_density = np.full(len(x), left_momentum_density)
-        momentum_density[x > initial_position] = right_momentum_density
-
-        energy_density = np.full(len(x), left_energy_density)
-        energy_density[x > initial_position] = right_energy_density
-    return (time, mass_density, momentum_density, energy_density)
 
 
 def time_deriv(stepper, evolved_vars, time):
@@ -185,7 +82,9 @@ def time_deriv(stepper, evolved_vars, time):
 def do_solve(reconstruction_scheme, deriv_scheme):
     init_grid()
 
-    time, mass_density, momentum_density, energy_density = set_initial_data()
+    time, mass_density, momentum_density, energy_density = ne.set_initial_data(
+        x, problem, initial_position)
+
     stepper = TimeStepper.Rk3Ssp(
         time_deriv, x, recons.reconstruct, reconstruction_scheme, deriv_scheme,
         np.asarray([mass_density, momentum_density, energy_density]), time)
