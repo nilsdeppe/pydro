@@ -186,3 +186,42 @@ def compute_sources(radius, evolved_vars):
     return (factor * momentum_density,
             factor * momentum_density**2 / mass_density, factor *
             (energy_density + pressure) * momentum_density / mass_density)
+
+
+def compute_primitives(primitive_vars, evolved_vars):
+    """
+    primitive_vars[0] = rest mass density
+    primitive_vars[1] = velocity in x-direction
+    primitive_vars[2] = pressure
+
+    evolved_vars[0] = rest mass density
+    evolved_vars[1] = momentum density in x-direction
+    evolved_vars[2] = energy density
+    """
+    if primitive_vars is None or not np.array_equal(primitive_vars.shape,
+                                                    evolved_vars.shape):
+        primitive_vars = np.zeros(evolved_vars.shape)
+
+    primitive_vars[0] = evolved_vars[0]
+    primitive_vars[1] = evolved_vars[1] / evolved_vars[0]
+    primitive_vars[2] = (_gamma - 1.0) * (
+        evolved_vars[2] - 0.5 * evolved_vars[1]**2 / evolved_vars[0])
+    return primitive_vars
+
+
+def compute_conserved(primitive_vars):
+    """
+    primitive_vars[0] = rest mass density
+    primitive_vars[1] = velocity in x-direction
+    primitive_vars[2] = pressure
+
+    evolved_vars[0] = rest mass density
+    evolved_vars[1] = momentum density in x-direction
+    evolved_vars[2] = energy density
+    """
+    return np.asarray([
+        primitive_vars[0], primitive_vars[1] * primitive_vars[0],
+        compute_energy_density(primitive_vars[0],
+                               primitive_vars[1] * primitive_vars[0],
+                               primitive_vars[2])
+    ])
