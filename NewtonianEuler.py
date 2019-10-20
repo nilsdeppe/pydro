@@ -49,6 +49,10 @@ def set_gamma(gamma):
     _gamma = gamma
 
 
+def get_gamma():
+    return _gamma
+
+
 def set_numerical_flux(numerical_flux):
     global _numerical_flux
     _numerical_flux = numerical_flux
