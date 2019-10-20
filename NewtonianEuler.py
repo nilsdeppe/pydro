@@ -75,15 +75,22 @@ def get_symmetry():
     return _symmetry_alpha
 
 
-def set_initial_data(x, initial_data, discontinuity_location):
+def set_initial_data(num_points, initial_data):
     """
     Returns the time, mass density, momentum density, and energy density
     """
-
-    jump_mask = x > discontinuity_location - 1.0e-10
+    def create_grid(x_min, x_max, num_points):
+        dx = (x_max - x_min) / num_points
+        return x_min + (np.arange(num_points) + 0.5) * dx
 
     if initial_data == InitialData.ShuOsher:
         set_gamma(1.4)
+        set_symmetry(Symmetry.No)
+        discontinuity_location = -4.0
+        x = create_grid(-5.0, 5.0, num_points)
+        jump_mask = x > discontinuity_location - 1.0e-10
+        final_time = 1.8
+
         initial_time = 0.0
         mass_density = np.full(len(x), 3.857143)
         mass_density[jump_mask] = 1.0 + 0.2 * np.sin(5.0 * x[jump_mask])
@@ -95,6 +102,9 @@ def set_initial_data(x, initial_data, discontinuity_location):
         velocity[jump_mask] = 0.0
     elif initial_data == InitialData.Sedov:
         set_gamma(1.4)
+        set_symmetry(Symmetry.No)
+        x = create_grid(0.0, 4.0, num_points)
+        final_time = 1.0e-3
 
         initial_time = 0.0
         dx = 3.5 * (x[1] - x[0])
@@ -116,9 +126,15 @@ def set_initial_data(x, initial_data, discontinuity_location):
         velocity = np.full(len(x), 0.0)
     else:
         set_gamma(1.4)
+        set_symmetry(Symmetry.No)
+        x = create_grid(0.0, 1.0, num_points)
+        discontinuity_location = 0.5
+        jump_mask = x > discontinuity_location - 1.0e-10
+
         initial_time = 0.0
         if initial_data == InitialData.Sod:
             set_gamma(1.4)
+            final_time = 0.2
             left_mass = 1.0
             left_velocity = 0.0
             left_pressure = 1.0
@@ -127,6 +143,7 @@ def set_initial_data(x, initial_data, discontinuity_location):
             right_pressure = 0.1
         elif initial_data == InitialData.Lax:
             set_gamma(1.4)
+            final_time = 0.16
             left_mass = 0.445
             left_velocity = 0.698
             left_pressure = 3.528
@@ -135,6 +152,7 @@ def set_initial_data(x, initial_data, discontinuity_location):
             right_pressure = 0.571
         elif initial_data == InitialData.Strong:
             set_gamma(1.4)
+            final_time = 0.4
             # https://iopscience.iop.org/article/10.1086/317361
             left_mass = 10.0
             left_velocity = 0.0
@@ -144,6 +162,7 @@ def set_initial_data(x, initial_data, discontinuity_location):
             right_pressure = 1.0
         elif initial_data == InitialData.Problem123:
             set_gamma(1.4)
+            final_time = 0.1
             left_mass = 1.0
             left_velocity = -2.0
             left_pressure = 0.1
@@ -159,20 +178,30 @@ def set_initial_data(x, initial_data, discontinuity_location):
             left_mass = 1.0
             left_velocity = 0.0
             if initial_data == InitialData.Severe1:
+                final_time = 0.1
                 left_pressure = 1.0e1
             elif initial_data == InitialData.Severe2:
+                final_time = 0.03
                 left_pressure = 1.0e2
             elif initial_data == InitialData.Severe3:
+                final_time = 0.01
                 left_pressure = 1.0e3
             elif initial_data == InitialData.Severe4:
+                final_time = 0.003
                 left_pressure = 1.0e4
             elif initial_data == InitialData.Severe5:
+                final_time = 0.001
                 left_pressure = 1.0e5
             right_mass = 1.0
             right_velocity = 0.0
             right_pressure = 0.1
         elif initial_data == InitialData.LeBlanc:
+            x = create_grid(0.0, 9.0, num_points)
+            discontinuity_location = 3.0
+            jump_mask = x > discontinuity_location - 1.0e-10
+
             set_gamma(5. / 3.)
+            final_time = 6.0
             left_mass = 1.0
             left_velocity = 0.0
             left_pressure = (2. / 3.) * 1e-1
@@ -181,6 +210,7 @@ def set_initial_data(x, initial_data, discontinuity_location):
             right_pressure = (2. / 3.) * 1e-10
         elif initial_data == InitialData.Mach1200:
             set_gamma(5. / 3.)
+            final_time = 0.04
             left_mass = 1.0
             left_velocity = 400
             left_pressure = (2. / 3.) * 1e-1
@@ -198,7 +228,8 @@ def set_initial_data(x, initial_data, discontinuity_location):
 
     mass_density, momentum_density, energy_density = compute_conserved(
         np.asarray([mass_density, velocity, pressure]))
-    return (initial_time, mass_density, momentum_density, energy_density)
+    return (initial_time, final_time, x, mass_density, momentum_density,
+            energy_density)
 
 
 def compute_pressure(mass_density, momentum_density, energy_density):

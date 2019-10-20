@@ -25,27 +25,12 @@ mpl.rcParams['figure.titlesize'] = 'medium'
 ################################################################
 # Configuration:
 problem = ne.InitialData.Severe1
-final_time = 0.1
 num_cells = 400
-
-ne.set_symmetry(ne.Symmetry.No)
 ne.set_numerical_flux(ne.NumericalFlux.Hll)
 reconstruct_prims = True
-
-initial_position = 0.5
-
-xmin = 0.0
-xmax = 1.0
-tmax = 0.2
 cfl = 0.2
 # End configuration
 ################################################################
-
-
-def init_grid():
-    global x
-    dx = (xmax - xmin) / num_cells
-    x = xmin + (np.arange(num_cells) + 0.5) * dx
 
 
 def time_deriv(stepper, evolved_vars, time):
@@ -74,10 +59,9 @@ def time_deriv(stepper, evolved_vars, time):
 
 
 def do_solve(reconstruction_scheme, deriv_scheme):
-    init_grid()
 
-    time, mass_density, momentum_density, energy_density = ne.set_initial_data(
-        x, problem, initial_position)
+    time, final_time, x, mass_density, momentum_density, energy_density = ne.set_initial_data(
+        num_cells, problem)
 
     stepper = TimeStepper.Rk3Ssp(
         time_deriv, x, recons.reconstruct, reconstruction_scheme, deriv_scheme,
@@ -100,12 +84,13 @@ def do_solve(reconstruction_scheme, deriv_scheme):
     mass_density, momentum_density, energy_density = stepper.get_evolved_vars()
     global global_order_used
     global_order_used = stepper.get_order_used()
-    return (stepper.get_time(), mass_density, momentum_density, energy_density)
+    return (stepper.get_time(), x, mass_density, momentum_density,
+            energy_density)
 
 
 print("Starting solves...")
 reconstruct_prims = True
-time, mass_density, momentum_density, energy_density = do_solve(
+time, x, mass_density, momentum_density, energy_density = do_solve(
     recons.Scheme.Minmod, Derivative.Scheme.MD)
 plt.plot(x, mass_density, 'o', label="Minmod")
 
@@ -126,7 +111,7 @@ reconstruct_prims = True
 #     recons.Scheme.Wcns3, Derivative.Scheme.MD4)
 # plt.plot(x, mass_density, 'v', label="WENO3-Prim-MD4")
 
-time, mass_density, momentum_density, energy_density = do_solve(
+time, x, mass_density, momentum_density, energy_density = do_solve(
     recons.Scheme.Wcns3, Derivative.Scheme.MND4)
 plt.plot(x, mass_density, '^', label="WENO3-Prim-MND4")
 
