@@ -30,6 +30,7 @@ class InitialData(enum.Enum):
     LeBlanc = enum.auto()
     Mach1200 = enum.auto()
     Problem123 = enum.auto()
+    Sedov = enum.auto()
     Severe1 = enum.auto()
     Severe2 = enum.auto()
     Severe3 = enum.auto()
@@ -92,6 +93,27 @@ def set_initial_data(x, initial_data, discontinuity_location):
 
         velocity = np.full(len(x), 2.629369)
         velocity[jump_mask] = 0.0
+    elif initial_data == InitialData.Sedov:
+        set_gamma(1.4)
+
+        initial_time = 0.0
+        dx = 3.5 * (x[1] - x[0])
+        jump_mask = (x > 2.0 - dx) & (x < 2.0 + dx)
+
+        mass_density = np.full(len(x), 1.0)
+
+        pressure = np.full(len(x), 1.0e-17)
+        # Given the energy epsilon the pressure is given by:
+        # p = \epsilon * 3.0 * (\gamma - 1.0) / ((\nu + 1) \pi dx^\nu)
+        # We use epsilon=3.0e6 to match the results of:
+        # "Positivity-preserving method for high-order conservative
+        #  schemes solving compressible Euler equations"
+        # but this seems to correspond to E=2.86e6 after evolution,
+        # which is not understood.
+        pressure[jump_mask] = 3.0e6 * 3.0 * (get_gamma() - 1.0) / (2.0 *
+                                                                   np.pi * dx)
+
+        velocity = np.full(len(x), 0.0)
     else:
         set_gamma(1.4)
         initial_time = 0.0
