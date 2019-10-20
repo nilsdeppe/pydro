@@ -112,7 +112,7 @@ def set_initial_data(num_points, initial_data):
 
         mass_density = np.full(len(x), 1.0)
 
-        pressure = np.full(len(x), 1.0e-17)
+        pressure = np.full(len(x), 1.0e-20)
         # Given the energy epsilon the pressure is given by:
         # p = \epsilon * 3.0 * (\gamma - 1.0) / ((\nu + 1) \pi dx^\nu)
         # We use epsilon=3.0e6 to match the results of:
