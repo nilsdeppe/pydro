@@ -120,10 +120,10 @@ def set_initial_data(x, initial_data, discontinuity_location):
             set_gamma(1.4)
             left_mass = 1.0
             left_velocity = -2.0
-            left_pressure = 0.4
+            left_pressure = 0.1
             right_mass = 1.0
             right_velocity = 2.0
-            right_pressure = 0.4
+            right_pressure = 0.1
         elif (initial_data == InitialData.Severe1
               or initial_data == InitialData.Severe2
               or initial_data == InitialData.Severe3
