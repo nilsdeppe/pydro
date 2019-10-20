@@ -43,18 +43,9 @@ cfl = 0.2
 
 
 def init_grid():
-    global num_faces
-    global num_interfaces
-    global dx
     global x
-    global x_face
-    global dt
-    num_faces = num_cells + 1
-    num_interfaces = 2 * (num_faces)
     dx = (xmax - xmin) / num_cells
-    print("Global dx: ", dx)
     x = xmin + (np.arange(num_cells) + 0.5) * dx
-    x_face = xmin + (np.arange(num_cells + 1)) * dx
 
 
 def time_deriv(stepper, evolved_vars, time):
