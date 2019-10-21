@@ -75,9 +75,60 @@ def get_symmetry():
     return _symmetry_alpha
 
 
+def riemann_left_right_states(initial_data):
+    """
+    Returns:
+    (left_mass_density, left_velocity, left_pressure,
+     right_mass_density, right_velocity, right_pressure)
+    """
+    if initial_data == InitialData.Sod:
+        return (1.0, 0.0, 1.0, 0.125, 0.0, 0.1)
+    elif initial_data == InitialData.Lax:
+        return (0.445, 0.698, 3.528, 0.5, 0.0, 0.571)
+    elif initial_data == InitialData.Strong:
+        # https://iopscience.iop.org/article/10.1086/317361
+        return (10.0, 0.0, 100.0, 1.0, 0.0, 1.0)
+    elif initial_data == InitialData.Problem123:
+        return (1.0, -2.0, 0.1, 1.0, 2.0, 0.1)
+    elif (initial_data == InitialData.Severe1
+          or initial_data == InitialData.Severe2
+          or initial_data == InitialData.Severe3
+          or initial_data == InitialData.Severe4
+          or initial_data == InitialData.Severe5):
+        left_mass = 1.0
+        left_velocity = 0.0
+        right_mass = 1.0
+        right_velocity = 0.0
+        right_pressure = 0.1
+        if initial_data == InitialData.Severe1:
+            return (left_mass, left_velocity, 1.0e1, right_mass,
+                    right_velocity, right_pressure)
+        elif initial_data == InitialData.Severe2:
+            return (left_mass, left_velocity, 1.0e2, right_mass,
+                    right_velocity, right_pressure)
+        elif initial_data == InitialData.Severe3:
+            return (left_mass, left_velocity, 1.0e3, right_mass,
+                    right_velocity, right_pressure)
+        elif initial_data == InitialData.Severe4:
+            return (left_mass, left_velocity, 1.0e4, right_mass,
+                    right_velocity, right_pressure)
+        elif initial_data == InitialData.Severe5:
+            return (left_mass, left_velocity, 1.0e5, right_mass,
+                    right_velocity, right_pressure)
+    elif initial_data == InitialData.LeBlanc:
+        return (1.0, 0.0, (2. / 3.) * 1.0e-1, 1.0e-3, 0.0, (2. / 3.) * 1.0e-10)
+    elif initial_data == InitialData.Mach1200:
+        return (1.0, 400, (2. / 3.) * 1.0e-1, 10.0, 0.0, (2. / 3.) * 1.0e-15)
+    import sys
+    print("Non-Riemann problem initial data: ", initial_data)
+    sys.exit(1)
+
+
 def set_initial_data(num_points, initial_data):
     """
-    Returns the time, mass density, momentum density, and energy density
+    Returns:
+    (initial time, final time, x, mass density, momentum density,
+     energy density)
     """
     def create_grid(x_min, x_max, num_points):
         dx = (x_max - x_min) / num_points
@@ -133,68 +184,24 @@ def set_initial_data(num_points, initial_data):
 
         initial_time = 0.0
         if initial_data == InitialData.Sod:
-            set_gamma(1.4)
             final_time = 0.2
-            left_mass = 1.0
-            left_velocity = 0.0
-            left_pressure = 1.0
-            right_mass = 0.125
-            right_velocity = 0.0
-            right_pressure = 0.1
         elif initial_data == InitialData.Lax:
-            set_gamma(1.4)
             final_time = 0.16
-            left_mass = 0.445
-            left_velocity = 0.698
-            left_pressure = 3.528
-            right_mass = 0.5
-            right_velocity = 0.0
-            right_pressure = 0.571
         elif initial_data == InitialData.Strong:
-            set_gamma(1.4)
             final_time = 0.4
             # https://iopscience.iop.org/article/10.1086/317361
-            left_mass = 10.0
-            left_velocity = 0.0
-            left_pressure = 100.0
-            right_mass = 1.0
-            right_velocity = 0.0
-            right_pressure = 1.0
         elif initial_data == InitialData.Problem123:
-            set_gamma(1.4)
             final_time = 0.1
-            left_mass = 1.0
-            left_velocity = -2.0
-            left_pressure = 0.1
-            right_mass = 1.0
-            right_velocity = 2.0
-            right_pressure = 0.1
-        elif (initial_data == InitialData.Severe1
-              or initial_data == InitialData.Severe2
-              or initial_data == InitialData.Severe3
-              or initial_data == InitialData.Severe4
-              or initial_data == InitialData.Severe5):
-            set_gamma(1.4)
-            left_mass = 1.0
-            left_velocity = 0.0
-            if initial_data == InitialData.Severe1:
-                final_time = 0.1
-                left_pressure = 1.0e1
-            elif initial_data == InitialData.Severe2:
-                final_time = 0.03
-                left_pressure = 1.0e2
-            elif initial_data == InitialData.Severe3:
-                final_time = 0.01
-                left_pressure = 1.0e3
-            elif initial_data == InitialData.Severe4:
-                final_time = 0.003
-                left_pressure = 1.0e4
-            elif initial_data == InitialData.Severe5:
-                final_time = 0.001
-                left_pressure = 1.0e5
-            right_mass = 1.0
-            right_velocity = 0.0
-            right_pressure = 0.1
+        elif initial_data == InitialData.Severe1:
+            final_time = 0.1
+        elif initial_data == InitialData.Severe2:
+            final_time = 0.03
+        elif initial_data == InitialData.Severe3:
+            final_time = 0.01
+        elif initial_data == InitialData.Severe4:
+            final_time = 0.003
+        elif initial_data == InitialData.Severe5:
+            final_time = 0.001
         elif initial_data == InitialData.LeBlanc:
             x = create_grid(0.0, 9.0, num_points)
             discontinuity_location = 3.0
@@ -202,21 +209,13 @@ def set_initial_data(num_points, initial_data):
 
             set_gamma(5. / 3.)
             final_time = 6.0
-            left_mass = 1.0
-            left_velocity = 0.0
-            left_pressure = (2. / 3.) * 1e-1
-            right_mass = 1.0e-3
-            right_velocity = 0.0
-            right_pressure = (2. / 3.) * 1e-10
         elif initial_data == InitialData.Mach1200:
             set_gamma(5. / 3.)
             final_time = 0.04
-            left_mass = 1.0
-            left_velocity = 400
-            left_pressure = (2. / 3.) * 1e-1
-            right_mass = 10.0
-            right_velocity = 0.0
-            right_pressure = (2. / 3.) * 1e-15
+
+        left_mass, left_velocity, left_pressure, \
+            right_mass, right_velocity, right_pressure = \
+                riemann_left_right_states(initial_data)
         mass_density = np.full(len(x), left_mass)
         mass_density[jump_mask] = right_mass
 
