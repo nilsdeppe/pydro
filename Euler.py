@@ -3,9 +3,6 @@
 
 import time as time_mod
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-import matplotlib.ticker as mtick
 
 use_numba = True
 try:
@@ -18,14 +15,7 @@ import TimeStepper
 import Derivative
 import NewtonianEuler as ne
 import SedovSolution as sedov
-
-# Use standard LaTeX font on plots
-mpl.rcParams['mathtext.fontset'] = 'cm'
-mpl.rcParams['mathtext.rm'] = 'serif'
-
-mpl.rcParams['font.size'] = 12
-mpl.rcParams['legend.fontsize'] = 'large'
-mpl.rcParams['figure.titlesize'] = 'medium'
+import Plotting as plot
 
 ################################################################
 # Configuration:
@@ -146,67 +136,6 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
             momentum_density, energy_density)
 
 
-def generate_plot_with_reference(x,
-                                 x_ref,
-                                 func,
-                                 reference,
-                                 quantity_name,
-                                 file_name,
-                                 ref_label,
-                                 every_n=0,
-                                 set_log_y=False):
-    # We force the formatting so that all rendered images are the same size.
-    # pyplot will change the size of the plot depending on how many significant
-    # digits are shown...
-    class ScalarFormatterForceFormat(mtick.ScalarFormatter):
-        def _set_format(self):  # Override function that finds format to use.
-            self.format = "%1.1f"  # Give format here
-
-    if every_n == 0:
-        every_n = len(x) // 50
-    plt.clf()
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-    fig.set_size_inches(6, 6, forward=True)
-    markersize = 5
-    fontsize = 20
-    linewidth = 1.8
-
-    # Use a colorblind and grey scale friendly color palette.
-    ax.set_prop_cycle(
-        plt.cycler(color=['#0F2080', '#F5793A', '#A95AA1', '#85C0F9']))
-
-    ax.plot(x[0::every_n],
-            func[0::every_n],
-            'o',
-            markersize=markersize,
-            label="Numerical")
-    if quantity_name != "Local Order":
-        ax.plot(x_ref, reference, '-', linewidth=linewidth, label=ref_label)
-
-    ax.tick_params(axis='both', which='major', labelsize=fontsize - 4)
-    ax.set_xlim(x[0], x[-1])
-    ax.set_xlabel(r"$x$", fontsize=fontsize)
-    ax.set_ylabel(quantity_name, fontsize=fontsize)
-
-    plt.grid(b=True, which='major', linestyle='--')
-
-    yfmt = ScalarFormatterForceFormat()
-    yfmt.set_powerlimits((0, 0))
-
-    ax.yaxis.set_major_formatter(yfmt)
-    ax.yaxis.offsetText.set_fontsize(fontsize - 4)
-
-    ax.xaxis.set_major_formatter(ScalarFormatterForceFormat())
-    ax.xaxis.offsetText.set_fontsize(fontsize - 4)
-
-    if quantity_name != "Local Order":
-        ax.legend(loc='best', fontsize=fontsize - 1)
-
-    if set_log_y:
-        plt.yscale('log')
-    plt.savefig(file_name, transparent=True, format='pdf', bbox_inches='tight')
-
-
 def main(problem, num_cells, numerical_flux, cfl):
     ne.set_numerical_flux(numerical_flux)
     print("Starting solves...")
@@ -278,33 +207,33 @@ def main(problem, num_cells, numerical_flux, cfl):
         velocity_ref = np.concatenate((-velocity_ref[::-1], velocity_ref))
         exact_or_ref_plot_label = "Exact"
 
-    generate_plot_with_reference(x,
-                                 x_ref,
-                                 mass_density,
-                                 mass_density_ref,
-                                 "Density",
-                                 str(problem).replace("InitialData.", '') +
-                                 "Density" + str(num_cells) + ".pdf",
-                                 exact_or_ref_plot_label,
-                                 every_n,
-                                 set_log_y=(problem == ne.InitialData.LeBlanc))
-    generate_plot_with_reference(x,
-                                 x_ref,
-                                 ne.compute_pressure(mass_density,
-                                                     momentum_density,
-                                                     energy_density),
-                                 pressure_ref,
-                                 "Pressure",
-                                 str(problem).replace("InitialData.", '') +
-                                 "Pressure" + str(num_cells) + ".pdf",
-                                 exact_or_ref_plot_label,
-                                 every_n,
-                                 set_log_y=(problem == ne.InitialData.LeBlanc))
-    generate_plot_with_reference(
+    plot.generate_plot_with_reference(
+        x,
+        x_ref,
+        mass_density,
+        mass_density_ref,
+        "Density",
+        str(problem).replace("InitialData.", '') + "Density" + str(num_cells) +
+        ".pdf",
+        exact_or_ref_plot_label,
+        every_n,
+        set_log_y=(problem == ne.InitialData.LeBlanc))
+    plot.generate_plot_with_reference(
+        x,
+        x_ref,
+        ne.compute_pressure(mass_density, momentum_density, energy_density),
+        pressure_ref,
+        "Pressure",
+        str(problem).replace("InitialData.", '') + "Pressure" +
+        str(num_cells) + ".pdf",
+        exact_or_ref_plot_label,
+        every_n,
+        set_log_y=(problem == ne.InitialData.LeBlanc))
+    plot.generate_plot_with_reference(
         x, x_ref, momentum_density / mass_density, velocity_ref, "Velocity",
         str(problem).replace("InitialData.", '') + "Velocity" +
         str(num_cells) + ".pdf", exact_or_ref_plot_label, every_n)
-    generate_plot_with_reference(
+    plot.generate_plot_with_reference(
         x, x_ref, order_used, None, "Local Order",
         str(problem).replace("InitialData.", '') + "Order" + str(num_cells) +
         ".pdf", exact_or_ref_plot_label, every_n)
@@ -350,7 +279,9 @@ def parse_args():
                         required=True,
                         help='The number of grid points/cells to use on the '
                         'finite-difference grid.')
-    parser.add_argument('--cfl', type=float, required=True,
+    parser.add_argument('--cfl',
+                        type=float,
+                        required=True,
                         help='The CFL factor to use.')
     return vars(parser.parse_args())
 
