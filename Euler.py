@@ -34,29 +34,84 @@ reconstruct_prims = True
 ################################################################
 
 
-def time_deriv(stepper, evolved_vars, time):
-    if reconstruct_prims:
-        primitive_vars = None
-        primitive_vars = ne.compute_primitives(primitive_vars, evolved_vars)
-        recons_prim = stepper.reconstruct_variables(primitive_vars)
-        recons_conserved = ne.compute_conserved(recons_prim)
-    else:
-        recons_conserved = stepper.reconstruct_variables(evolved_vars)
+class NewtonianEuler1d:
+    _reconstruct_prims = None
 
-    numerical_fluxes_at_faces = ne.compute_numerical_flux(recons_conserved)
+    _x = None
+    _dx = None
 
-    dt_evolved_vars = -1.0 * stepper.flux_deriv(numerical_fluxes_at_faces,
-                                                ne.compute_flux(evolved_vars))
+    _reconstructor = None
+    _reconstruction_scheme = None
+    _deriv_scheme = None
 
-    if ne.get_symmetry() != 0:
-        dt_evolved_vars += ne.compute_sources(stepper.get_x(), evolved_vars)
+    _order_used = None
 
-    bc_distance = 7
-    # zero time derivs at boundary
-    for i in range(len(dt_evolved_vars)):
-        dt_evolved_vars[i][0:bc_distance] = 0.0
-        dt_evolved_vars[i][-bc_distance:] = 0.0
-    return dt_evolved_vars
+    def __init__(self, reconstruct_prims, x, reconstructor,
+                 reconstruction_scheme, deriv_scheme):
+        self._reconstruct_prims = reconstruct_prims
+
+        self._x = np.copy(x)
+        self._dx = x[1] - x[0]
+
+        self._reconstructor = reconstructor
+        self._reconstruction_scheme = reconstruction_scheme
+        self._deriv_scheme = deriv_scheme
+
+        self._order_used = np.zeros(len(x), dtype=int)
+
+    def _reset_order_used(self, length=None):
+        if length is None:
+            length = len(self._x)
+
+        # set to 100 because during reconstruction we use the min of the
+        # current order used and the order used by past variables. It seems
+        # unlikely we will use a 100th order scheme.
+        if len(self._order_used) != length:
+            self._order_used = np.zeros(length, dtype=int) + 100
+        else:
+            self._order_used[:] = 100
+
+    def get_dx(self):
+        return self._dx
+
+    def __call__(self, stepper, evolved_vars, time):
+        self._reset_order_used()
+        if self._reconstruct_prims:
+            primitive_vars = None
+            primitive_vars = ne.compute_primitives(primitive_vars,
+                                                   evolved_vars)
+            recons_prim = self._reconstructor(primitive_vars,
+                                              self._reconstruction_scheme,
+                                              self._order_used)
+            recons_conserved = ne.compute_conserved(recons_prim)
+        else:
+            recons_conserved = self._reconstructor(evolved_vars,
+                                                   self._reconstruction_scheme,
+                                                   self._order_used)
+
+        numerical_fluxes_at_faces = ne.compute_numerical_flux(recons_conserved)
+
+        dt_evolved_vars = -1.0 * self._flux_deriv(
+            numerical_fluxes_at_faces, ne.compute_flux(evolved_vars))
+
+        if ne.get_symmetry() != 0:
+            dt_evolved_vars += ne.compute_sources(stepper.get_x(),
+                                                  evolved_vars)
+
+        bc_distance = 7
+        # zero time derivs at boundary
+        for i in range(len(dt_evolved_vars)):
+            dt_evolved_vars[i][0:bc_distance] = 0.0
+            dt_evolved_vars[i][-bc_distance:] = 0.0
+        return dt_evolved_vars
+
+    def get_order_used(self):
+        return self._order_used
+
+    def _flux_deriv(self, numerical_fluxes_at_faces, cell_fluxes):
+        return Derivative.differentiate_flux(self._deriv_scheme, self._dx,
+                                             numerical_fluxes_at_faces,
+                                             cell_fluxes, self._order_used)
 
 
 def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
@@ -64,8 +119,11 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
     time, final_time, x, mass_density, momentum_density, energy_density = ne.set_initial_data(
         num_cells, problem)
 
+    ne1d_solver = NewtonianEuler1d(reconstruct_prims, x, reconstructor,
+                                   reconstruction_scheme, deriv_scheme)
+
     stepper = TimeStepper.Rk3Ssp(
-        time_deriv, x, reconstructor, reconstruction_scheme, deriv_scheme,
+        ne1d_solver,
         np.asarray([mass_density, momentum_density, energy_density]), time)
 
     while stepper.get_time() <= final_time:
@@ -76,7 +134,7 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
             ne.compute_pressure(mass_density, momentum_density,
                                 energy_density))
         speed = np.amax(np.abs(momentum_density / mass_density) + sound_speed)
-        dt = cfl * stepper.get_dx() / speed
+        dt = cfl * ne1d_solver.get_dx() / speed
         if stepper.get_time() + dt > final_time:
             dt = final_time - stepper.get_time()
             stepper.take_step(dt)
@@ -84,7 +142,7 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
         stepper.take_step(dt)
 
     mass_density, momentum_density, energy_density = stepper.get_evolved_vars()
-    return (stepper.get_time(), x, stepper.get_order_used(), mass_density,
+    return (stepper.get_time(), x, ne1d_solver.get_order_used(), mass_density,
             momentum_density, energy_density)
 
 

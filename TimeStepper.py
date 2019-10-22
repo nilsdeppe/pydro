@@ -8,39 +8,13 @@ import Derivative
 
 class Rk3Ssp:
     _compute_time_deriv = None
-    _x = None
-    _dx = None
     _evolved_vars = None
-
     _time = None
 
-    _reconstructor = None
-    _reconstruction_scheme = None
-    _order_used = None
-
-    _deriv_scheme = None
-
-    def __init__(self, time_deriv, x, reconstructor, reconstruction_scheme,
-                 deriv_scheme, initial_state, initial_time):
+    def __init__(self, time_deriv, initial_state, initial_time):
         self._compute_time_deriv = time_deriv
-        self._x = np.copy(x)
-        self._dx = x[1] - x[0]
         self._evolved_vars = np.copy(initial_state)
         self._time = initial_time
-        self._reconstructor = reconstructor
-        self._reconstruction_scheme = reconstruction_scheme
-        self._deriv_scheme = deriv_scheme
-
-        self._order_used = np.zeros(len(x), dtype=int)
-
-    def _reset_order_used(self, length=None):
-        if length is None:
-            length = len(self._x)
-
-        if len(self._order_used) != length:
-            self._order_used = np.zeros(length, dtype=int) + 100
-        else:
-            self._order_used[:] = 100
 
     def get_evolved_vars(self):
         return self._evolved_vars
@@ -48,34 +22,15 @@ class Rk3Ssp:
     def get_time(self):
         return self._time
 
-    def get_x(self):
-        return self._x
-
     def get_order_used(self):
         return self._order_used
 
-    def get_dx(self):
-        return self._dx
-
-    def reconstruct_variables(self, vars_to_reconstruct):
-        return self._reconstructor(vars_to_reconstruct,
-                                   self._reconstruction_scheme,
-                                   self._order_used)
-
-    def flux_deriv(self, numerical_fluxes_at_faces, cell_fluxes):
-        return Derivative.differentiate_flux(self._deriv_scheme, self._dx,
-                                             numerical_fluxes_at_faces,
-                                             cell_fluxes, self._order_used)
-
     def take_step(self, dt):
-        self._reset_order_used()
         dt_vars = self._compute_time_deriv(self, self._evolved_vars,
                                            self._time)
         v1 = self._evolved_vars + dt * dt_vars
-        self._reset_order_used()
         dt_vars = dt_vars = self._compute_time_deriv(self, v1, self._time + dt)
         v2 = 0.25 * (3.0 * self._evolved_vars + v1 + dt * dt_vars)
-        self._reset_order_used()
         dt_vars = self._compute_time_deriv(self, v2, self._time + 0.5 * dt)
         self._evolved_vars = 1.0 / 3.0 * (self._evolved_vars + 2.0 * v2 +
                                           2.0 * dt * dt_vars)
