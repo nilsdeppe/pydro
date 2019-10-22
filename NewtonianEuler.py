@@ -18,13 +18,26 @@ class Symmetry(enum.Enum):
 
 
 @enum.unique
-class NumericalFlux(enum.Enum):
+class NumericalFlux(enum.IntEnum):
     Rusanov = enum.auto()
     Hll = enum.auto()
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return str(self)
+
+    @staticmethod
+    def argparse(s):
+        try:
+            return NumericalFlux[s.upper()]
+        except KeyError:
+            return s
+
 
 @enum.unique
-class InitialData(enum.Enum):
+class InitialData(enum.IntEnum):
     Sod = enum.auto()
     Lax = enum.auto()
     LeBlanc = enum.auto()
@@ -38,6 +51,19 @@ class InitialData(enum.Enum):
     Severe5 = enum.auto()
     ShuOsher = enum.auto()
     Strong = enum.auto()
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return str(self)
+
+    @staticmethod
+    def argparse(s):
+        try:
+            return InitialData[s]
+        except KeyError:
+            return s
 
 
 _gamma = None
