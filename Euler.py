@@ -276,6 +276,7 @@ def parse_args():
     parser.add_argument('--problem',
                         type=ne.InitialData.argparse,
                         choices=list(ne.InitialData),
+                        required=True,
                         help='Which standard test problem to solve.')
     parser.add_argument(
         '--numerical-flux',
@@ -288,9 +289,11 @@ def parse_args():
     parser.add_argument('-n',
                         '--number-of-cells',
                         type=int,
+                        required=True,
                         help='The number of grid points/cells to use on the '
                         'finite-difference grid.')
-    parser.add_argument('--cfl', type=float, help='The CFL factor to use.')
+    parser.add_argument('--cfl', type=float, required=True,
+                        help='The CFL factor to use.')
     return vars(parser.parse_args())
 
 
