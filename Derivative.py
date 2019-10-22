@@ -39,10 +39,10 @@ def _md4_impl_(dx, numerical_flux, center_flux, order_used):
     for j in range(len(numerical_flux)):
         temp = np.zeros(len(numerical_flux[j]) - 1)
         for i in range(1, len(numerical_flux[j]) - 2):
-            temp[i] = 9 / 8 * (numerical_flux[j][i + 1] -
-                               numerical_flux[j][i]) / dx - 1 / 24 * (
-                                   numerical_flux[j][i + 2] -
-                                   numerical_flux[j][i - 1]) / dx
+            temp[i] = 9.0 / 8.0 * (numerical_flux[j][i + 1] -
+                                   numerical_flux[j][i]) / dx - 1.0 / 24.0 * (
+                numerical_flux[j][i + 2] -
+                numerical_flux[j][i - 1]) / dx
         result.append(temp)
     return result
 
@@ -59,9 +59,9 @@ def _mnd4_impl_(dx, numerical_flux, center_flux, order_used):
         temp = np.zeros(len(numerical_flux[j]) - 1)
         for i in range(1, len(center_flux[j]) - 1):
             f_p = 4.0 / 3.0 * numerical_flux[j][
-                i + 1] - 1 / 6 * center_flux[j][i + 1]
-            f_m = 4.0 / 3.0 * numerical_flux[j][i] - 1 / 6 * center_flux[j][i -
-                                                                            1]
+                i + 1] - 1.0 / 6.0 * center_flux[j][i + 1]
+            f_m = 4.0 / 3.0 * numerical_flux[j][i] - 1.0 / 6.0 * center_flux[j][i -
+                                                                                1]
             temp[i] = (f_p - f_m) / dx
         result.append(temp)
     return result
@@ -78,10 +78,10 @@ def _mnd6_impl_(dx, numerical_flux, center_flux, order_used):
     for j in range(len(numerical_flux)):
         temp = np.zeros(len(numerical_flux[j]) - 1)
         for i in range(1, len(center_flux[j]) - 2):
-            f_p = 3 / 2 * numerical_flux[j][i + 1] - 3 / 10 * center_flux[j][
-                i + 1] + 1 / 30 * numerical_flux[j][i + 2]
-            f_m = 3 / 2 * numerical_flux[j][i] - 3 / 10 * center_flux[j][
-                i - 1] + 1 / 30 * numerical_flux[j][i - 1]
+            f_p = 3.0 / 2.0 * numerical_flux[j][i + 1] - 3.0 / 10.0 * center_flux[j][
+                i + 1] + 1.0 / 30.0 * numerical_flux[j][i + 2]
+            f_m = 3.0 / 2.0 * numerical_flux[j][i] - 3.0 / 10.0 * center_flux[j][
+                i - 1] + 1.0 / 30.0 * numerical_flux[j][i - 1]
             temp[i] = (f_p - f_m) / dx
         result.append(temp)
     return result
