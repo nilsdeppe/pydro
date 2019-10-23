@@ -10,6 +10,7 @@ class Rk3Ssp:
     _compute_time_deriv = None
     _evolved_vars = None
     _time = None
+    _cfl_coefficient = 1.0
 
     def __init__(self, time_deriv, initial_state, initial_time):
         self._compute_time_deriv = time_deriv
@@ -21,6 +22,9 @@ class Rk3Ssp:
 
     def get_time(self):
         return self._time
+
+    def get_cfl_coefficient(self):
+        return self._cfl_coefficient
 
     def take_step(self, dt):
         dt_vars = self._compute_time_deriv(self, self._evolved_vars,
