@@ -186,7 +186,7 @@ def main(problem, num_cells, numerical_flux, cfl):
     # Set global order at the boundaries to 9 to avoid weird plots
     order_used[order_used > 10] = 9
     every_n = 1
-    if problem != ne.InitialData.ShuOsher and problem != ne.InitialData.Sedov:
+    if ne.is_riemann_problem(problem):
         import NewtonianRiemannSolver as riemann
         discontinuity_location = 3.0 if problem == ne.InitialData.LeBlanc else None
         mass_density_ref, velocity_ref, pressure_ref = \
@@ -243,6 +243,12 @@ def main(problem, num_cells, numerical_flux, cfl):
 
         velocity_ref = np.concatenate((u, np.zeros([num_zero_points])))
         velocity_ref = np.concatenate((-velocity_ref[::-1], velocity_ref))
+        exact_or_ref_plot_label = "Exact"
+    elif problem == ne.InitialData.Sinusoid:
+        x_ref = x
+        mass_density_ref = 1.0 + 0.2 * np.sin(np.pi * (x - time))
+        velocity_ref = np.ones(len(x))
+        pressure_ref = np.ones(len(x))
         exact_or_ref_plot_label = "Exact"
 
     plot.generate_plot_with_reference(

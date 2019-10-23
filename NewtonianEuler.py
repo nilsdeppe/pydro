@@ -50,6 +50,7 @@ class InitialData(enum.IntEnum):
     Severe4 = enum.auto()
     Severe5 = enum.auto()
     ShuOsher = enum.auto()
+    Sinusoid = enum.auto()
     Strong = enum.auto()
 
     def __str__(self):
@@ -150,6 +151,14 @@ def riemann_left_right_states(initial_data):
     sys.exit(1)
 
 
+def is_riemann_problem(problem):
+    """
+    Returns true if `problem` is a Riemann problem
+    """
+    return (problem != InitialData.ShuOsher and problem != InitialData.Sedov
+            and problem != InitialData.Sinusoid)
+
+
 def set_initial_data(num_points, initial_data):
     """
     Returns:
@@ -162,7 +171,21 @@ def set_initial_data(num_points, initial_data):
 
     periodic_bcs = False
 
-    if initial_data == InitialData.ShuOsher:
+    if initial_data == InitialData.Sinusoid:
+        set_gamma(1.4)
+        set_symmetry(Symmetry.No)
+
+        x = create_grid(0.0, 8.0, num_points)
+
+        initial_time = 0.0
+        final_time = 2.0
+
+        mass_density = 1.0 + 0.2 * np.sin(np.pi * x)
+        pressure = np.zeros(x.shape) + 1.0
+        velocity = np.ones(x.shape)
+
+        periodic_bcs = True
+    elif initial_data == InitialData.ShuOsher:
         set_gamma(1.4)
         set_symmetry(Symmetry.No)
         discontinuity_location = -4.0
