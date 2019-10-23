@@ -82,7 +82,7 @@ class NewtonianEuler1d:
                                                          _buffer_size]
         return new_vars
 
-    def __call__(self, stepper, evolved_vars, time):
+    def __call__(self, evolved_vars, time):
         self._reset_order_used(
             len(self._x) +
             2 * self._buffer_size if self._periodic_bcs else len(self._x))

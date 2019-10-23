@@ -27,12 +27,12 @@ class Rk3Ssp:
         return self._cfl_coefficient
 
     def take_step(self, dt):
-        dt_vars = self._compute_time_deriv(self, self._evolved_vars,
+        dt_vars = self._compute_time_deriv(self._evolved_vars,
                                            self._time)
         v1 = self._evolved_vars + dt * dt_vars
-        dt_vars = dt_vars = self._compute_time_deriv(self, v1, self._time + dt)
+        dt_vars = dt_vars = self._compute_time_deriv(v1, self._time + dt)
         v2 = 0.25 * (3.0 * self._evolved_vars + v1 + dt * dt_vars)
-        dt_vars = self._compute_time_deriv(self, v2, self._time + 0.5 * dt)
+        dt_vars = self._compute_time_deriv(v2, self._time + 0.5 * dt)
         self._evolved_vars = 1.0 / 3.0 * (self._evolved_vars + 2.0 * v2 +
                                           2.0 * dt * dt_vars)
         self._time += dt
