@@ -111,8 +111,7 @@ class NewtonianEuler1d:
                 _periodic_bcs else evolved_vars))
 
         if ne.get_symmetry() != 0:
-            dt_evolved_vars += ne.compute_sources(stepper.get_x(),
-                                                  evolved_vars)
+            dt_evolved_vars += ne.compute_sources(self._x, evolved_vars)
 
         if self._periodic_bcs:
             new_dt_evolved_vars = np.zeros(evolved_vars.shape)
