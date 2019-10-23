@@ -161,7 +161,7 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
             ne.compute_pressure(mass_density, momentum_density,
                                 energy_density))
         speed = np.amax(np.abs(momentum_density / mass_density) + sound_speed)
-        dt = cfl * ne1d_solver.get_dx() / speed
+        dt = cfl * stepper.get_cfl_coefficient() * ne1d_solver.get_dx() / speed
         if stepper.get_time() + dt > final_time:
             dt = final_time - stepper.get_time()
             stepper.take_step(dt)
