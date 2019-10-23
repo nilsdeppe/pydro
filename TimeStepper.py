@@ -133,6 +133,69 @@ class Rk6Ssp:
         self._time += dt
 
 
+class Rk8Ssp:
+    """
+    A eighth-order SSP Runge-Kutta method from
+    Strong Stability Preserving High Order Time Discretization Methods
+    by Gottlieb, Shu, and Tadmor
+    """
+    _compute_time_deriv = None
+    _evolved_vars = None
+    _time = None
+    _cfl_coefficient = 1.0
+
+    def __init__(self, time_deriv, initial_state, initial_time):
+        self._compute_time_deriv = time_deriv
+        self._evolved_vars = np.copy(initial_state)
+        self._time = initial_time
+
+    def get_evolved_vars(self):
+        return self._evolved_vars
+
+    def get_time(self):
+        return self._time
+
+    def get_cfl_coefficient(self):
+        return self._cfl_coefficient
+
+    def take_step(self, dt):
+        k0 = self._compute_time_deriv(self._evolved_vars, self._time)
+
+        v1 = self._evolved_vars + dt * k0
+        k1 = self._compute_time_deriv(v1, None)
+
+        v2 = v1 + dt * k1
+        k2 = self._compute_time_deriv(v2, None)
+
+        v3 = v2 + dt * k2
+        k3 = self._compute_time_deriv(v3, None)
+
+        v4 = v3 + dt * k3
+        k4 = self._compute_time_deriv(v4, None)
+
+        v5 = v4 + dt * k4
+        k5 = self._compute_time_deriv(v5, None)
+
+        v5 = v4 + dt * k4
+        k5 = self._compute_time_deriv(v5, None)
+
+        v6 = v5 + dt * k5
+        k6 = self._compute_time_deriv(v6, None)
+
+        v7 = v6 + dt * k6
+        k7 = self._compute_time_deriv(v7, None)
+
+        self._evolved_vars = (0.36788194444444444 * self._evolved_vars +
+                              0.3678571428571429 * v1 +
+                              0.1840277777777778 * v2 +
+                              0.06111111111111111 * v3 + 0.015625 * v4 +
+                              0.002777777777777778 * v5 +
+                              0.0006944444444444445 * v6 +
+                              2.48015873015873e-05 * (v7 + dt * k7))
+
+        self._time += dt
+
+
 def _adams_bashforth1(history, evolved_vars, dvars_dt, dt):
     for j in range(len(dvars_dt)):
         evolved_vars[j] += dt * history[0][j]
