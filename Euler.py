@@ -30,18 +30,23 @@ class NewtonianEuler1d:
     _x = None
     _dx = None
 
+    _periodic_bcs = None
+    _buffer_size = 9
+
     _reconstructor = None
     _reconstruction_scheme = None
     _deriv_scheme = None
 
     _order_used = None
 
-    def __init__(self, reconstruct_prims, x, reconstructor,
+    def __init__(self, reconstruct_prims, x, periodic_bcs, reconstructor,
                  reconstruction_scheme, deriv_scheme):
         self._reconstruct_prims = reconstruct_prims
 
         self._x = np.copy(x)
         self._dx = x[1] - x[0]
+
+        self._periodic_bcs = periodic_bcs
 
         self._reconstructor = reconstructor
         self._reconstruction_scheme = reconstruction_scheme
@@ -64,12 +69,30 @@ class NewtonianEuler1d:
     def get_dx(self):
         return self._dx
 
+    def _extend_for_periodic(self, variables):
+        new_vars = np.zeros(
+            [variables.shape[0], variables.shape[1] + 2 * self._buffer_size])
+        for i in range(variables.shape[0]):
+            # copy over center
+            new_vars[i, self._buffer_size:-self._buffer_size] = variables[i, :]
+            # copy over boundaries
+            new_vars[i, 0:self.
+                     _buffer_size] = variables[i, -self._buffer_size:]
+            new_vars[i, -self._buffer_size:] = variables[i, 0:self.
+                                                         _buffer_size]
+        return new_vars
+
     def __call__(self, stepper, evolved_vars, time):
-        self._reset_order_used()
+        self._reset_order_used(
+            len(self._x) +
+            2 * self._buffer_size if self._periodic_bcs else len(self._x))
         if self._reconstruct_prims:
             primitive_vars = None
             primitive_vars = ne.compute_primitives(primitive_vars,
                                                    evolved_vars)
+            if self._periodic_bcs:
+                primitive_vars = self._extend_for_periodic(primitive_vars)
+
             recons_prim = self._reconstructor(primitive_vars,
                                               self._reconstruction_scheme,
                                               self._order_used)
@@ -82,20 +105,33 @@ class NewtonianEuler1d:
         numerical_fluxes_at_faces = ne.compute_numerical_flux(recons_conserved)
 
         dt_evolved_vars = -1.0 * self._flux_deriv(
-            numerical_fluxes_at_faces, ne.compute_flux(evolved_vars))
+            numerical_fluxes_at_faces,
+            ne.compute_flux(
+                self._extend_for_periodic(evolved_vars) if self.
+                _periodic_bcs else evolved_vars))
 
         if ne.get_symmetry() != 0:
             dt_evolved_vars += ne.compute_sources(stepper.get_x(),
                                                   evolved_vars)
 
-        bc_distance = 7
-        # zero time derivs at boundary
-        for i in range(len(dt_evolved_vars)):
-            dt_evolved_vars[i][0:bc_distance] = 0.0
-            dt_evolved_vars[i][-bc_distance:] = 0.0
+        if self._periodic_bcs:
+            new_dt_evolved_vars = np.zeros(evolved_vars.shape)
+            for i in range(dt_evolved_vars.shape[0]):
+                # copy over center
+                new_dt_evolved_vars[i, :] = dt_evolved_vars[
+                    i, self._buffer_size:-self._buffer_size]
+            dt_evolved_vars = new_dt_evolved_vars
+        else:
+            bc_distance = self._buffer_size
+            # zero time derivs at boundary
+            for i in range(len(dt_evolved_vars)):
+                dt_evolved_vars[i][0:bc_distance] = 0.0
+                dt_evolved_vars[i][-bc_distance:] = 0.0
         return dt_evolved_vars
 
     def get_order_used(self):
+        if self._periodic_bcs:
+            return self._order_used[self._buffer_size:-self._buffer_size]
         return self._order_used
 
     def _flux_deriv(self, numerical_fluxes_at_faces, cell_fluxes):
@@ -106,11 +142,13 @@ class NewtonianEuler1d:
 
 def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
              deriv_scheme):
-    time, final_time, x, mass_density, momentum_density, energy_density = ne.set_initial_data(
-        num_cells, problem)
+    time, final_time, x, periodic_bcs, mass_density, \
+        momentum_density, energy_density = ne.set_initial_data(
+            num_cells, problem)
 
-    ne1d_solver = NewtonianEuler1d(reconstruct_prims, x, reconstructor,
-                                   reconstruction_scheme, deriv_scheme)
+    ne1d_solver = NewtonianEuler1d(reconstruct_prims, x, periodic_bcs,
+                                   reconstructor, reconstruction_scheme,
+                                   deriv_scheme)
 
     stepper = TimeStepper.Rk3Ssp(
         ne1d_solver,

@@ -153,12 +153,14 @@ def riemann_left_right_states(initial_data):
 def set_initial_data(num_points, initial_data):
     """
     Returns:
-    (initial time, final time, x, mass density, momentum density,
-     energy density)
+    (initial time, final time, x, periodic BCs (True/False) mass density,
+     momentum density, energy density)
     """
     def create_grid(x_min, x_max, num_points):
         dx = (x_max - x_min) / num_points
         return x_min + (np.arange(num_points) + 0.5) * dx
+
+    periodic_bcs = False
 
     if initial_data == InitialData.ShuOsher:
         set_gamma(1.4)
@@ -253,8 +255,8 @@ def set_initial_data(num_points, initial_data):
 
     mass_density, momentum_density, energy_density = compute_conserved(
         np.asarray([mass_density, velocity, pressure]))
-    return (initial_time, final_time, x, mass_density, momentum_density,
-            energy_density)
+    return (initial_time, final_time, x, periodic_bcs, mass_density,
+            momentum_density, energy_density)
 
 
 def compute_pressure(mass_density, momentum_density, energy_density):
