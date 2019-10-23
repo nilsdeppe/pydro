@@ -162,7 +162,7 @@ def is_riemann_problem(problem):
 def set_initial_data(num_points, initial_data):
     """
     Returns:
-    (initial time, final time, x, periodic BCs (True/False) mass density,
+    (initial time, final time, x, periodic BCs (True/False), mass density,
      momentum density, energy density)
     """
     def create_grid(x_min, x_max, num_points):
