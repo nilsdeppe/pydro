@@ -22,9 +22,6 @@ class Rk3Ssp:
     def get_time(self):
         return self._time
 
-    def get_order_used(self):
-        return self._order_used
-
     def take_step(self, dt):
         dt_vars = self._compute_time_deriv(self, self._evolved_vars,
                                            self._time)
