@@ -82,6 +82,21 @@ class NewtonianEuler1d:
                                                          _buffer_size]
         return new_vars
 
+    def _remove_for_periodic(self, variables):
+        new_vars = np.zeros(
+            [variables.shape[0], variables.shape[1] - 2 * self._buffer_size])
+        for i in range(variables.shape[0]):
+            # copy over center
+            new_vars[i, :] = variables[i, self._buffer_size:-self._buffer_size]
+        return new_vars
+
+    def _zero_boundary(self, variables):
+        bc_distance = self._buffer_size
+        # zero time derivs at boundary
+        for i in range(len(variables)):
+            variables[i][0:bc_distance] = 0.0
+            variables[i][-bc_distance:] = 0.0
+
     def __call__(self, evolved_vars, time):
         self._reset_order_used(
             len(self._x) +
@@ -112,20 +127,10 @@ class NewtonianEuler1d:
 
         if ne.get_symmetry() != 0:
             dt_evolved_vars += ne.compute_sources(self._x, evolved_vars)
-
         if self._periodic_bcs:
-            new_dt_evolved_vars = np.zeros(evolved_vars.shape)
-            for i in range(dt_evolved_vars.shape[0]):
-                # copy over center
-                new_dt_evolved_vars[i, :] = dt_evolved_vars[
-                    i, self._buffer_size:-self._buffer_size]
-            dt_evolved_vars = new_dt_evolved_vars
+            dt_evolved_vars = self._remove_for_periodic(dt_evolved_vars)
         else:
-            bc_distance = self._buffer_size
-            # zero time derivs at boundary
-            for i in range(len(dt_evolved_vars)):
-                dt_evolved_vars[i][0:bc_distance] = 0.0
-                dt_evolved_vars[i][-bc_distance:] = 0.0
+            self._zero_boundary(dt_evolved_vars)
         return dt_evolved_vars
 
     def get_order_used(self):
