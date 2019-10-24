@@ -162,7 +162,7 @@ def is_riemann_problem(problem):
 def set_initial_data(num_points, initial_data):
     """
     Returns:
-    (initial time, final time, x, periodic BCs (True/False) mass density,
+    (initial time, final time, x, periodic BCs (True/False), mass density,
      momentum density, energy density)
     """
     def create_grid(x_min, x_max, num_points):
@@ -291,8 +291,8 @@ def compute_energy_density(mass_density, momentum_density, pressure):
     return pressure / (_gamma - 1.0) + 0.5 * momentum_density**2 / mass_density
 
 
-def compute_sound_speed(mass_density, press):
-    return np.sqrt(_gamma * press / mass_density)
+def compute_sound_speed(mass_density, pressure):
+    return np.sqrt(_gamma * pressure / mass_density)
 
 
 def compute_flux(evolved_vars):
