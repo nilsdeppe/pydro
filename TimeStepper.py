@@ -37,9 +37,9 @@ class Rk3Ssp:
         self._time += dt
 
 
-class Rk4Ssp:
+class LinearRk4Ssp:
     """
-    A fourth-order SSP Runge-Kutta method from
+    A fourth-order SSP linear Runge-Kutta method from
     Strong Stability Preserving High Order Time Discretization Methods
     by Gottlieb, Shu, and Tadmor
     """
@@ -81,9 +81,9 @@ class Rk4Ssp:
         self._time += dt
 
 
-class Rk6Ssp:
+class LinearRk6Ssp:
     """
-    A sixth-order SSP Runge-Kutta method from
+    A sixth-order SSP linear Runge-Kutta method from
     Strong Stability Preserving High Order Time Discretization Methods
     by Gottlieb, Shu, and Tadmor
     """
@@ -133,9 +133,9 @@ class Rk6Ssp:
         self._time += dt
 
 
-class Rk8Ssp:
+class LinearRk8Ssp:
     """
-    A eighth-order SSP Runge-Kutta method from
+    A eighth-order SSP linear Runge-Kutta method from
     Strong Stability Preserving High Order Time Discretization Methods
     by Gottlieb, Shu, and Tadmor
     """
