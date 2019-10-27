@@ -39,6 +39,7 @@ class NumericalFlux(enum.IntEnum):
 
 @enum.unique
 class InitialData(enum.IntEnum):
+    InteractingBlastWaves = enum.auto()
     Sod = enum.auto()
     Lax = enum.auto()
     LeBlanc = enum.auto()
@@ -154,9 +155,7 @@ def riemann_left_right_states(initial_data):
         return (1.0, 0.0, (2. / 3.) * 1.0e-1, 1.0e-3, 0.0, (2. / 3.) * 1.0e-10)
     elif initial_data == InitialData.Mach1200:
         return (1.0, 400, (2. / 3.) * 1.0e-1, 10.0, 0.0, (2. / 3.) * 1.0e-15)
-    import sys
-    print("Non-Riemann problem initial data: ", initial_data)
-    sys.exit(1)
+    raise Exception("Non-Riemann problem initial data: " + str(initial_data))
 
 
 def is_riemann_problem(problem):
@@ -164,7 +163,8 @@ def is_riemann_problem(problem):
     Returns true if `problem` is a Riemann problem
     """
     return (problem != InitialData.ShuOsher and problem != InitialData.Sedov
-            and problem != InitialData.Sinusoid)
+            and problem != InitialData.Sinusoid
+            and problem != InitialData.InteractingBlastWaves)
 
 
 def set_initial_data(num_points, initial_data):
@@ -194,6 +194,33 @@ def set_initial_data(num_points, initial_data):
 
         boundary_condition = [
             BoundaryCondition.Periodic, BoundaryCondition.Periodic
+        ]
+    elif initial_data == InitialData.InteractingBlastWaves:
+        set_gamma(1.4)
+        set_symmetry(Symmetry.No)
+        x = create_grid(0.0, 1.0, num_points)
+
+        initial_time = 0.0
+        final_time = 0.038
+
+        # start with middle values
+        mass_density = np.full(len(x), 1.0)
+        pressure = np.full(len(x), 0.01)
+        velocity = np.full(len(x), 0.0)
+
+        left_mask = x < 0.1
+        right_mask = x >= 0.9
+
+        mass_density[left_mask] = 1.0
+        pressure[left_mask] = 1000.0
+        velocity[left_mask] = 0.0
+
+        mass_density[right_mask] = 1.0
+        pressure[right_mask] = 100.0
+        velocity[right_mask] = 0.0
+
+        boundary_condition = [
+            BoundaryCondition.Reflecting, BoundaryCondition.Reflecting
         ]
     elif initial_data == InitialData.ShuOsher:
         set_gamma(1.4)
@@ -438,6 +465,8 @@ def compute_numerical_flux(recons_evolved_vars):
     reconstructed_mass_density = recons_evolved_vars[0]
     reconstructed_momentum_density = recons_evolved_vars[1]
     reconstructed_energy_density = recons_evolved_vars[2]
+
+    recons_evolved_vars[0][recons_evolved_vars[0] == 0.0] = 1.0e-30
 
     sound_speed = compute_sound_speed(
         reconstructed_mass_density,
