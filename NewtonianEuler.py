@@ -21,6 +21,7 @@ class Symmetry(enum.Enum):
 class NumericalFlux(enum.IntEnum):
     Rusanov = enum.auto()
     Hll = enum.auto()
+    Hllc = enum.auto()
     Hlle = enum.auto()
 
     def __str__(self):
@@ -447,15 +448,123 @@ def _hlle_helper(velocity, sound_speed, mass_f, momentum_f, energy_f,
     return (nf_mass, nf_momentum, nf_energy)
 
 
+def _hllc_helper(velocity, sound_speed, pressure, mass_f, momentum_f, energy_f,
+                 reconstructed_mass_density, reconstructed_momentum_density,
+                 reconstructed_energy_density):
+    nf_mass = np.zeros(len(reconstructed_mass_density) // 2)
+    nf_momentum = np.zeros(len(reconstructed_mass_density) // 2)
+    nf_energy = np.zeros(len(reconstructed_mass_density) // 2)
+
+    for i in range(0, len(nf_mass), 1):
+        rho_l = reconstructed_mass_density[2 * i]
+        rho_r = reconstructed_mass_density[2 * i + 1]
+        u_l = velocity[2 * i]
+        u_r = velocity[2 * i + 1]
+
+        # "Simple" wave speeds which are most dissipative but also most robust,
+        # especially for near-vacuum problems like the Sedov and 1-2-3 problem.
+        s_r = max(velocity[2 * i + 1] + sound_speed[2 * i + 1],
+                  velocity[2 * i] + sound_speed[2 * i])
+        s_l = min(velocity[2 * i + 1] - sound_speed[2 * i + 1],
+                  velocity[2 * i] - sound_speed[2 * i])
+
+        # # First Einfeldt method: wave speeds based on Roe averages
+        # sqrt_rho_l = np.sqrt(rho_l)
+        # sqrt_rho_r = np.sqrt(rho_r)
+        # inv_sqrt_rho_sum = 1.0 / (sqrt_rho_l + sqrt_rho_r)
+        # velocity_roe = (sqrt_rho_l * u_l + sqrt_rho_r * u_r) * inv_sqrt_rho_sum
+        # pressure_l = (_gamma - 1.0) * (reconstructed_energy_density[2 * i] -
+        #                                0.5 * u_l**2 * rho_l)
+        # pressure_r = (_gamma - 1.0) * (
+        #     reconstructed_energy_density[2 * i + 1] - 0.5 * u_r**2 * rho_r)
+
+        # h_l = (reconstructed_energy_density[2 * i] + pressure_l) / rho_l
+        # h_r = (reconstructed_energy_density[2 * i + 1] + pressure_r) / rho_r
+        # h_tilde = (sqrt_rho_l * h_l + sqrt_rho_r * h_r) * inv_sqrt_rho_sum
+
+        # sound_speed_tilde = (_gamma - 1.0) * (h_tilde - 0.5 * velocity_roe**2)
+
+        # s_r = max(velocity[2 * i + 1] + sound_speed[2 * i + 1],
+        #           velocity_roe + sound_speed_tilde)
+        # s_l = min(velocity_roe - sound_speed_tilde,
+        #           velocity[2 * i] - sound_speed[2 * i])
+
+        # # The second Einfeldt method for estimating the speeds.
+        # sqrt_rho_l = np.sqrt(rho_l)
+        # sqrt_rho_r = np.sqrt(rho_r)
+        # inv_sqrt_rho_sum = 1.0 / (sqrt_rho_l + sqrt_rho_r)
+        # velocity_roe = (sqrt_rho_l * u_l + sqrt_rho_r * u_r) * inv_sqrt_rho_sum
+        # d_bar = np.sqrt((sqrt_rho_l * sound_speed[2 * i]**2 + sqrt_rho_r *
+        #                  sound_speed[2 * i + 1]**2) * inv_sqrt_rho_sum +
+        #                 0.5 * sqrt_rho_l * sqrt_rho_r * inv_sqrt_rho_sum**2 *
+        #                 (u_r - u_l)**2)
+        # s_r = velocity_roe + d_bar
+        # s_l = velocity_roe - d_bar
+
+        # s_r = max(
+        #     max(velocity[2 * i + 1] + sound_speed[2 * i + 1],
+        #         velocity[2 * i] + sound_speed[2 * i]), 0.0)
+        # s_l = min(
+        #     min(velocity[2 * i + 1] - sound_speed[2 * i + 1],
+        #         velocity[2 * i] - sound_speed[2 * i]), 0.0)
+
+        if s_l >= 0.0:
+            nf_mass[i] = mass_f[2 * i]
+            nf_momentum[i] = momentum_f[2 * i]
+            nf_energy[i] = energy_f[2 * i]
+        elif s_r <= 0.0:
+            nf_mass[i] = mass_f[2 * i + 1]
+            nf_momentum[i] = momentum_f[2 * i + 1]
+            nf_energy[i] = energy_f[2 * i + 1]
+        else:
+            s_star = (pressure[2 * i + 1] - pressure[2 * i] + rho_l * u_l *
+                      (s_l - u_l) - rho_r * u_r *
+                      (s_r - u_r)) / (rho_l * (s_l - u_l) - rho_r *
+                                      (s_r - u_r))
+
+            if s_star >= 0.0:
+                # left star state
+                factor_a = (s_l - velocity[2 * i]) / (s_l - s_star)
+
+                nf_mass[i] = mass_f[2 * i] + s_l * (factor_a - 1.0) * rho_l
+                nf_momentum[i] = momentum_f[
+                    2 * i] + s_l * (s_star * factor_a * rho_l -
+                                    reconstructed_momentum_density[2 * i])
+                nf_energy[i] = energy_f[2 * i] + s_l * (
+                    (reconstructed_energy_density[2 * i] +
+                     (s_star - velocity[2 * i]) *
+                     (rho_l * s_star + pressure[2 * i] /
+                      (s_l - velocity[2 * i]))) * factor_a -
+                    reconstructed_energy_density[2 * i])
+            else:
+                # right star state
+                factor_a = (s_r - velocity[2 * i + 1]) / (s_r - s_star)
+
+                nf_mass[i] = mass_f[2 * i + 1] + s_r * (factor_a - 1.0) * rho_r
+                nf_momentum[i] = momentum_f[2 * i + 1] + s_r * (
+                    s_star * factor_a * rho_r -
+                    reconstructed_momentum_density[2 * i + 1])
+                nf_energy[i] = energy_f[2 * i + 1] + s_r * (
+                    (reconstructed_energy_density[2 * i + 1] +
+                     (s_star - velocity[2 * i + 1]) *
+                     (rho_r * s_star + pressure[2 * i + 1] /
+                      (s_r - velocity[2 * i + 1]))) * factor_a -
+                    reconstructed_energy_density[2 * i + 1])
+
+    return (nf_mass, nf_momentum, nf_energy)
+
+
 # If numba is present, JIT the nuumerical flux helper
 if use_numba:
     rusanov_helper = nb.jit(nopython=True)(_rusanov_helper)
     hll_helper = nb.jit(nopython=True)(_hll_helper)
     hlle_helper = nb.jit(nopython=True)(_hlle_helper)
+    hllc_helper = nb.jit(nopython=True)(_hllc_helper)
 else:
     rusanov_helper = _rusanov_helper
     hll_helper = _hll_helper
     hlle_helper = _hlle_helper
+    hllc_helper = _hllc_helper
 
 
 def compute_numerical_flux(recons_evolved_vars):
@@ -468,11 +577,10 @@ def compute_numerical_flux(recons_evolved_vars):
 
     recons_evolved_vars[0][recons_evolved_vars[0] == 0.0] = 1.0e-30
 
-    sound_speed = compute_sound_speed(
-        reconstructed_mass_density,
-        compute_pressure(reconstructed_mass_density,
-                         reconstructed_momentum_density,
-                         reconstructed_energy_density))
+    pressure = compute_pressure(reconstructed_mass_density,
+                                reconstructed_momentum_density,
+                                reconstructed_energy_density)
+    sound_speed = compute_sound_speed(reconstructed_mass_density, pressure)
 
     velocity = reconstructed_momentum_density / reconstructed_mass_density
     if _numerical_flux == NumericalFlux.Rusanov:
@@ -494,6 +602,11 @@ def compute_numerical_flux(recons_evolved_vars):
     elif _numerical_flux == NumericalFlux.Hlle:
         return hlle_helper(velocity, sound_speed, mass_f, momentum_f, energy_f,
                            reconstructed_mass_density,
+                           reconstructed_momentum_density,
+                           reconstructed_energy_density)
+    elif _numerical_flux == NumericalFlux.Hllc:
+        return hllc_helper(velocity, sound_speed, pressure, mass_f, momentum_f,
+                           energy_f, reconstructed_mass_density,
                            reconstructed_momentum_density,
                            reconstructed_energy_density)
     else:
