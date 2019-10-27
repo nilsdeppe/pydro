@@ -21,6 +21,7 @@ class Symmetry(enum.Enum):
 class NumericalFlux(enum.IntEnum):
     Rusanov = enum.auto()
     Hll = enum.auto()
+    Hlle = enum.auto()
 
     def __str__(self):
         return self.name
@@ -31,7 +32,7 @@ class NumericalFlux(enum.IntEnum):
     @staticmethod
     def argparse(s):
         try:
-            return NumericalFlux[s.upper()]
+            return NumericalFlux[s]
         except KeyError:
             return s
 
@@ -359,9 +360,47 @@ def _hll_helper(v_p_cs, v_m_cs, mass_f, momentum_f, energy_f,
     nf_energy = np.zeros(len(reconstructed_mass_density) // 2)
 
     for i in range(0, len(nf_mass), 1):
-        # speed = max(lf_speed[2 * i + 1], lf_speed[2 * i])
         max_speed = max(max(v_p_cs[2 * i + 1], v_p_cs[2 * i]), 0.0)
         min_speed = min(min(v_m_cs[2 * i + 1], v_m_cs[2 * i]), 0.0)
+        speed_diff = max_speed - min_speed
+        nf_mass[i] = (-min_speed * mass_f[2 * i + 1] + max_speed *
+                      mass_f[2 * i]) / speed_diff + max_speed * min_speed * (
+                          reconstructed_mass_density[2 * i + 1] -
+                          reconstructed_mass_density[2 * i]) / speed_diff
+        nf_momentum[i] = (
+            -min_speed * momentum_f[2 * i + 1] + max_speed *
+            momentum_f[2 * i]) / speed_diff + max_speed * min_speed * (
+                reconstructed_momentum_density[2 * i + 1] -
+                reconstructed_momentum_density[2 * i]) / speed_diff
+        nf_energy[i] = (-min_speed * energy_f[2 * i + 1] +
+                        max_speed * energy_f[2 * i]
+                        ) / speed_diff + max_speed * min_speed * (
+                            reconstructed_energy_density[2 * i + 1] -
+                            reconstructed_energy_density[2 * i]) / speed_diff
+
+    return (nf_mass, nf_momentum, nf_energy)
+
+
+def _hlle_helper(velocity, sound_speed, mass_f, momentum_f, energy_f,
+                 reconstructed_mass_density, reconstructed_momentum_density,
+                 reconstructed_energy_density):
+    nf_mass = np.zeros(len(reconstructed_mass_density) // 2)
+    nf_momentum = np.zeros(len(reconstructed_mass_density) // 2)
+    nf_energy = np.zeros(len(reconstructed_mass_density) // 2)
+
+    for i in range(0, len(nf_mass), 1):
+        sqrt_rho_l = np.sqrt(reconstructed_mass_density[2 * i])
+        sqrt_rho_r = np.sqrt(reconstructed_mass_density[2 * i + 1])
+        inv_sqrt_rho_sum = 1.0 / (sqrt_rho_l + sqrt_rho_r)
+        velocity_roe = (sqrt_rho_l * velocity[2 * i] +
+                        sqrt_rho_r * velocity[2 * i + 1]) * inv_sqrt_rho_sum
+        d_bar = np.sqrt((sqrt_rho_l * sound_speed[2 * i]**2 + sqrt_rho_r *
+                         sound_speed[2 * i + 1]**2) * inv_sqrt_rho_sum +
+                        0.5 * sqrt_rho_l * sqrt_rho_r * inv_sqrt_rho_sum**2 *
+                        (velocity[2 * i + 1] - velocity[2 * i])**2)
+
+        max_speed = max(velocity_roe + d_bar, 0.0)
+        min_speed = min(velocity_roe - d_bar, 0.0)
         speed_diff = max_speed - min_speed
         nf_mass[i] = (-min_speed * mass_f[2 * i + 1] + max_speed *
                       mass_f[2 * i]) / speed_diff + max_speed * min_speed * (
@@ -385,9 +424,11 @@ def _hll_helper(v_p_cs, v_m_cs, mass_f, momentum_f, energy_f,
 if use_numba:
     rusanov_helper = nb.jit(nopython=True)(_rusanov_helper)
     hll_helper = nb.jit(nopython=True)(_hll_helper)
+    hlle_helper = nb.jit(nopython=True)(_hlle_helper)
 else:
     rusanov_helper = _rusanov_helper
     hll_helper = _hll_helper
+    hlle_helper = _hlle_helper
 
 
 def compute_numerical_flux(recons_evolved_vars):
@@ -421,6 +462,11 @@ def compute_numerical_flux(recons_evolved_vars):
                           energy_f, reconstructed_mass_density,
                           reconstructed_momentum_density,
                           reconstructed_energy_density)
+    elif _numerical_flux == NumericalFlux.Hlle:
+        return hlle_helper(velocity, sound_speed, mass_f, momentum_f, energy_f,
+                           reconstructed_mass_density,
+                           reconstructed_momentum_density,
+                           reconstructed_energy_density)
     else:
         raise ValueError("Unknown numerical flux")
 
