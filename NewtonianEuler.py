@@ -67,6 +67,13 @@ class InitialData(enum.IntEnum):
             return s
 
 
+@enum.unique
+class BoundaryCondition(enum.IntEnum):
+    Constant = enum.auto()
+    Periodic = enum.auto()
+    Reflecting = enum.auto()
+
+
 _gamma = None
 _numerical_flux = None
 _symmetry_alpha = None
@@ -169,7 +176,7 @@ def set_initial_data(num_points, initial_data):
         dx = (x_max - x_min) / num_points
         return x_min + (np.arange(num_points) + 0.5) * dx
 
-    periodic_bcs = False
+    boundary_condition = None
 
     if initial_data == InitialData.Sinusoid:
         set_gamma(1.4)
@@ -184,7 +191,9 @@ def set_initial_data(num_points, initial_data):
         pressure = np.zeros(x.shape) + 1.0
         velocity = np.ones(x.shape)
 
-        periodic_bcs = True
+        boundary_condition = [
+            BoundaryCondition.Periodic, BoundaryCondition.Periodic
+        ]
     elif initial_data == InitialData.ShuOsher:
         set_gamma(1.4)
         set_symmetry(Symmetry.No)
@@ -202,6 +211,10 @@ def set_initial_data(num_points, initial_data):
 
         velocity = np.full(len(x), 2.629369)
         velocity[jump_mask] = 0.0
+
+        boundary_condition = [
+            BoundaryCondition.Constant, BoundaryCondition.Constant
+        ]
     elif initial_data == InitialData.Sedov:
         set_gamma(1.4)
         set_symmetry(Symmetry.No)
@@ -226,6 +239,9 @@ def set_initial_data(num_points, initial_data):
                                                                    np.pi * dx)
 
         velocity = np.full(len(x), 0.0)
+        boundary_condition = [
+            BoundaryCondition.Constant, BoundaryCondition.Constant
+        ]
     else:
         set_gamma(1.4)
         set_symmetry(Symmetry.No)
@@ -276,9 +292,13 @@ def set_initial_data(num_points, initial_data):
         velocity = np.full(len(x), left_velocity)
         velocity[jump_mask] = right_velocity
 
+        boundary_condition = [
+            BoundaryCondition.Constant, BoundaryCondition.Constant
+        ]
+
     mass_density, momentum_density, energy_density = compute_conserved(
         np.asarray([mass_density, velocity, pressure]))
-    return (initial_time, final_time, x, periodic_bcs, mass_density,
+    return (initial_time, final_time, x, boundary_condition, mass_density,
             momentum_density, energy_density)
 
 

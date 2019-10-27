@@ -30,7 +30,7 @@ class NewtonianEuler1d:
     _x = None
     _dx = None
 
-    _periodic_bcs = None
+    _boundary_conditions = None
     _buffer_size = 9
 
     _reconstructor = None
@@ -39,14 +39,14 @@ class NewtonianEuler1d:
 
     _order_used = None
 
-    def __init__(self, reconstruct_prims, x, periodic_bcs, reconstructor,
-                 reconstruction_scheme, deriv_scheme):
+    def __init__(self, reconstruct_prims, x, boundary_conditions,
+                 reconstructor, reconstruction_scheme, deriv_scheme):
         self._reconstruct_prims = reconstruct_prims
 
         self._x = np.copy(x)
         self._dx = x[1] - x[0]
 
-        self._periodic_bcs = periodic_bcs
+        self._boundary_conditions = boundary_conditions
 
         self._reconstructor = reconstructor
         self._reconstruction_scheme = reconstruction_scheme
@@ -57,6 +57,10 @@ class NewtonianEuler1d:
     def _reset_order_used(self, length=None):
         if length is None:
             length = len(self._x)
+            if self._boundary_conditions[0] != ne.BoundaryCondition.Constant:
+                length += self._buffer_size
+            if self._boundary_conditions[1] != ne.BoundaryCondition.Constant:
+                length += self._buffer_size
 
         # set to 100 because during reconstruction we use the min of the
         # current order used and the order used by past variables. It seems
@@ -67,46 +71,109 @@ class NewtonianEuler1d:
             self._order_used[:] = 100
 
     def get_dx(self):
+        """
+        Return the inter-grid-point spacing
+        """
         return self._dx
 
-    def _extend_for_periodic(self, variables):
-        new_vars = np.zeros(
-            [variables.shape[0], variables.shape[1] + 2 * self._buffer_size])
+    def _extend_for_boundary_conditions(self, variables):
+        """
+        Extend the variables numpy matrix (rows is variables, columns
+        are grid points) to account for periodic or reflecting boundary
+        conditions. In the reflecting case the velocity is negated.
+        """
+        if all(bc == ne.BoundaryCondition.Constant
+               for bc in self._boundary_conditions):
+            return variables
+
+        lower_buffer = (
+            0 if self._boundary_conditions[0] == ne.BoundaryCondition.Constant
+            else self._buffer_size)
+        upper_buffer = (
+            0 if self._boundary_conditions[1] == ne.BoundaryCondition.Constant
+            else self._buffer_size)
+
+        new_vars = np.zeros([
+            variables.shape[0],
+            variables.shape[1] + lower_buffer + upper_buffer
+        ])
+        # copy over center
         for i in range(variables.shape[0]):
-            # copy over center
-            new_vars[i, self._buffer_size:-self._buffer_size] = variables[i, :]
-            # copy over boundaries
-            new_vars[i, 0:self.
-                     _buffer_size] = variables[i, -self._buffer_size:]
-            new_vars[i, -self._buffer_size:] = variables[i, 0:self.
-                                                         _buffer_size]
+            new_vars[i, lower_buffer:(len(new_vars) if upper_buffer ==
+                                      0 else -upper_buffer)] = variables[i, :]
+        # Check lower side for periodic BCs
+        if self._boundary_conditions[0] == ne.BoundaryCondition.Periodic:
+            for i in range(variables.shape[0]):
+                new_vars[i, 0:self.
+                         _buffer_size] = variables[i, -self._buffer_size:]
+        # Check upper side for periodic BCs
+        if self._boundary_conditions[1] == ne.BoundaryCondition.Periodic:
+            for i in range(variables.shape[0]):
+                new_vars[i, -self._buffer_size:] = variables[i, 0:self.
+                                                             _buffer_size]
+
+        # Check lower side for reflecting BCs
+        if self._boundary_conditions[0] == ne.BoundaryCondition.Reflecting:
+            temp = np.copy(variables[0, 0:self._buffer_size])
+            new_vars[0, 0:self._buffer_size] = temp[::-1]
+
+            temp = np.copy(variables[1, 0:self._buffer_size])
+            new_vars[1, 0:self._buffer_size] = -temp[::-1]
+
+            temp = np.copy(variables[2, 0:self._buffer_size])
+            new_vars[2, 0:self._buffer_size] = temp[::-1]
+
+        # Check upper side for reflecting BCs
+        if self._boundary_conditions[1] == ne.BoundaryCondition.Reflecting:
+            temp = np.copy(variables[0, -self._buffer_size:])
+            new_vars[0, -self._buffer_size:] = temp[::-1]
+
+            temp = np.copy(variables[1, -self._buffer_size:])
+            new_vars[1, -self._buffer_size:] = -temp[::-1]
+
+            temp = np.copy(variables[2, -self._buffer_size:])
+            new_vars[2, -self._buffer_size:] = temp[::-1]
+
         return new_vars
 
-    def _remove_for_periodic(self, variables):
-        new_vars = np.zeros(
-            [variables.shape[0], variables.shape[1] - 2 * self._buffer_size])
-        for i in range(variables.shape[0]):
-            # copy over center
-            new_vars[i, :] = variables[i, self._buffer_size:-self._buffer_size]
-        return new_vars
+    def _finalize_boundary_conditions(self, variables):
+        """
+        Removes the extra grid points for periodic or reflecting BCs and zeros
+        the time derivative boundaries for Constant boundary conditions.
+        """
+        if all(bc == ne.BoundaryCondition.Constant
+               for bc in self._boundary_conditions):
+            for var in variables:
+                var[0:self._buffer_size] = 0.0
+                var[-self._buffer_size:] = 0.0
+            return variables
 
-    def _zero_boundary(self, variables):
-        bc_distance = self._buffer_size
-        # zero time derivs at boundary
-        for i in range(len(variables)):
-            variables[i][0:bc_distance] = 0.0
-            variables[i][-bc_distance:] = 0.0
+        # Not just constant boundary conditions case...
+        new_vars = np.zeros([variables.shape[0], len(self._x)])
+        lower_buffer = (
+            0 if self._boundary_conditions[0] == ne.BoundaryCondition.Constant
+            else self._buffer_size)
+        upper_buffer = (variables.shape[1] if self._boundary_conditions[1] ==
+                        ne.BoundaryCondition.Constant else -self._buffer_size)
+        for i in range(variables.shape[0]):
+            if (self._boundary_conditions[0] == ne.BoundaryCondition.Constant):
+                variables[i, 0:self._buffer_size] = 0.0
+            if (self._boundary_conditions[1] == ne.BoundaryCondition.Constant):
+                variables[i, -self._buffer_size:] = 0.0
+            # copy over center
+            new_vars[i, :] = variables[i, lower_buffer:upper_buffer]
+        return new_vars
 
     def __call__(self, evolved_vars, time):
-        self._reset_order_used(
-            len(self._x) +
-            2 * self._buffer_size if self._periodic_bcs else len(self._x))
+        self._reset_order_used()
         if self._reconstruct_prims:
             primitive_vars = None
             primitive_vars = ne.compute_primitives(primitive_vars,
                                                    evolved_vars)
-            if self._periodic_bcs:
-                primitive_vars = self._extend_for_periodic(primitive_vars)
+            if any(bc != ne.BoundaryCondition.Constant
+                   for bc in self._boundary_conditions):
+                primitive_vars = self._extend_for_boundary_conditions(
+                    primitive_vars)
 
             recons_prim = self._reconstructor(primitive_vars,
                                               self._reconstruction_scheme,
@@ -117,26 +184,38 @@ class NewtonianEuler1d:
                                                    self._reconstruction_scheme,
                                                    self._order_used)
 
+        # Bound the mass density below by 10^{-100}
+        recons_conserved[0][recons_conserved[0] == 0.0] = 1.0e-100
+
         numerical_fluxes_at_faces = ne.compute_numerical_flux(recons_conserved)
 
         dt_evolved_vars = -1.0 * self._flux_deriv(
             numerical_fluxes_at_faces,
             ne.compute_flux(
-                self._extend_for_periodic(evolved_vars) if self.
-                _periodic_bcs else evolved_vars))
+                self._extend_for_boundary_conditions(evolved_vars) if
+                (self._boundary_conditions != [
+                    ne.BoundaryCondition.Constant, ne.BoundaryCondition.
+                    Constant
+                ]) else evolved_vars))
 
         if ne.get_symmetry() != 0:
             dt_evolved_vars += ne.compute_sources(self._x, evolved_vars)
-        if self._periodic_bcs:
-            dt_evolved_vars = self._remove_for_periodic(dt_evolved_vars)
-        else:
-            self._zero_boundary(dt_evolved_vars)
+        dt_evolved_vars = self._finalize_boundary_conditions(dt_evolved_vars)
         return dt_evolved_vars
 
     def get_order_used(self):
-        if self._periodic_bcs:
-            return self._order_used[self._buffer_size:-self._buffer_size]
-        return self._order_used
+        """
+        Returns the lowest order used for reconstruction.
+        """
+        lower_bound = (
+            0 if self._boundary_conditions[0] == ne.BoundaryCondition.Constant
+            else self._buffer_size)
+        upper_bound = (
+            len(self._order_used)
+            if self._boundary_conditions[1] == ne.BoundaryCondition.Constant
+            else len(self._order_used) - self._buffer_size)
+
+        return self._order_used[lower_bound:upper_bound]
 
     def _flux_deriv(self, numerical_fluxes_at_faces, cell_fluxes):
         return Derivative.differentiate_flux(self._deriv_scheme, self._dx,
@@ -146,11 +225,11 @@ class NewtonianEuler1d:
 
 def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
              deriv_scheme):
-    time, final_time, x, periodic_bcs, mass_density, \
+    time, final_time, x, boundary_conditions, mass_density, \
         momentum_density, energy_density = ne.set_initial_data(
             num_cells, problem)
 
-    ne1d_solver = NewtonianEuler1d(reconstruct_prims, x, periodic_bcs,
+    ne1d_solver = NewtonianEuler1d(reconstruct_prims, x, boundary_conditions,
                                    reconstructor, reconstruction_scheme,
                                    deriv_scheme)
 
