@@ -294,11 +294,22 @@ def main(problem, num_cells, numerical_flux, cfl):
                                            momentum_density_ref,
                                            energy_density_ref)
         exact_or_ref_plot_label = "Reference"
+    elif problem == ne.InitialData.InteractingBlastWaves:
+        # Compute reference solution for interacting blast waves
+        num_cells_original = num_cells
+        num_cells = 5000
+        _, x_ref, _, mass_density_ref, momentum_density_ref, \
+            energy_density_ref = do_solve(num_cells, problem, cfl,
+                                          recons.reconstruct,
+                                          recons.Scheme.Wcns3,
+                                          Derivative.Scheme.MD)
+        num_cells = num_cells_original
+        velocity_ref = momentum_density_ref / mass_density_ref
+        pressure_ref = ne.compute_pressure(mass_density_ref,
+                                           momentum_density_ref,
+                                           energy_density_ref)
+        exact_or_ref_plot_label = "Reference"
     elif problem == ne.InitialData.Sedov:
-        plt.plot(
-            x,
-            ne.compute_pressure(mass_density, momentum_density,
-                                energy_density), 'o')
         r, p, rho, u, _, _, _, _, _ = sedov.sedov(t=1.0e-3,
                                                   E0=2.86e6,
                                                   rho0=1.0,
