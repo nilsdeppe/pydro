@@ -156,9 +156,9 @@ class NewtonianEuler1d:
         upper_buffer = (variables.shape[1] if self._boundary_conditions[1] ==
                         ne.BoundaryCondition.Constant else -self._buffer_size)
         for i in range(variables.shape[0]):
-            if (self._boundary_conditions[0] == ne.BoundaryCondition.Constant):
+            if self._boundary_conditions[0] == ne.BoundaryCondition.Constant:
                 variables[i, 0:self._buffer_size] = 0.0
-            if (self._boundary_conditions[1] == ne.BoundaryCondition.Constant):
+            if self._boundary_conditions[1] == ne.BoundaryCondition.Constant:
                 variables[i, -self._buffer_size:] = 0.0
             # copy over center
             new_vars[i, :] = variables[i, lower_buffer:upper_buffer]
