@@ -344,6 +344,11 @@ def main(problem, num_cells, numerical_flux, cfl):
         velocity_ref = np.ones(len(x))
         pressure_ref = np.ones(len(x))
         exact_or_ref_plot_label = "Exact"
+    else:
+        import matplotlib.pyplot as plt
+        plt.plot(x, mass_density)
+        plt.show()
+        return None
 
     plot.generate_plot_with_reference(
         x,
