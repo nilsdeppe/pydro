@@ -282,7 +282,7 @@ def set_initial_data(num_points, initial_data):
         if initial_data == InitialData.Sod:
             final_time = 0.2
         elif initial_data == InitialData.Lax:
-            final_time = 0.16
+            final_time = 0.1
         elif initial_data == InitialData.Strong:
             final_time = 0.4
             # https://iopscience.iop.org/article/10.1086/317361
