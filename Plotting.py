@@ -53,7 +53,7 @@ def generate_plot_with_reference(x,
 
     ax.tick_params(axis='both', which='major', labelsize=fontsize - 4)
     ax.set_xlim(x[0], x[-1])
-    ax.set_xlabel(r"$x$", fontsize=fontsize)
+    ax.set_xlabel(r"$x$", fontsize=fontsize, labelpad=-5)
     ax.set_ylabel(quantity_name, fontsize=fontsize)
 
     plt.grid(b=True, which='major', linestyle='--')
