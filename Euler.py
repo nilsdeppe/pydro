@@ -224,7 +224,7 @@ class NewtonianEuler1d:
 
 
 def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
-             deriv_scheme):
+             deriv_scheme, generate_spacetime_plots):
     time, final_time, x, boundary_conditions, mass_density, \
         momentum_density, energy_density = ne.set_initial_data(
             num_cells, problem)
@@ -236,6 +236,10 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
     stepper = TimeStepper.Rk3Ssp(
         ne1d_solver,
         np.asarray([mass_density, momentum_density, energy_density]), time)
+
+    times = []
+    spacetime_history = [[]
+                         for _ in range(len(stepper.get_evolved_vars()) + 1)]
 
     while stepper.get_time() <= final_time:
         mass_density, momentum_density, energy_density = stepper.get_evolved_vars(
@@ -251,19 +255,33 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
             stepper.take_step(dt)
             break
         stepper.take_step(dt)
+        if generate_spacetime_plots:
+            for var_index in range(len(stepper.get_evolved_vars())):
+                spacetime_history[var_index].append(
+                    np.copy(stepper.get_evolved_vars()[var_index]))
+            spacetime_history[-1].append(np.copy(ne1d_solver.get_order_used()))
+            times.append(stepper.get_time() - dt)
+
+    if generate_spacetime_plots:
+        for i in range(len(spacetime_history)):
+            spacetime_history[i] = np.asarray(spacetime_history[i])
 
     mass_density, momentum_density, energy_density = stepper.get_evolved_vars()
     return (stepper.get_time(), x, ne1d_solver.get_order_used(), mass_density,
-            momentum_density, energy_density)
+            momentum_density, energy_density, np.asarray(times),
+            spacetime_history)
 
 
-def main(problem, num_cells, numerical_flux, cfl):
+def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
     ne.set_numerical_flux(numerical_flux)
     print("Starting solves...")
     start = time_mod.time()
-    time, x, order_used, mass_density, momentum_density, energy_density \
-        = do_solve(num_cells, problem, cfl, recons.reconstruct, recons.Scheme.Wcns3,
-                   Derivative.Scheme.MD)
+    time, x, order_used, mass_density, momentum_density, energy_density, \
+        times, spacetime_history = do_solve(num_cells, problem, cfl,
+                                            recons.reconstruct,
+                                            recons.Scheme.Wcns3,
+                                            Derivative.Scheme.MD,
+                                            generate_spacetime_plots)
     print("Time for ND5: ", time_mod.time() - start)
 
     # Set global order at the boundaries to 9 to avoid weird plots
@@ -271,7 +289,8 @@ def main(problem, num_cells, numerical_flux, cfl):
     every_n = 1
     if ne.is_riemann_problem(problem):
         import NewtonianRiemannSolver as riemann
-        discontinuity_location = 3.0 if problem == ne.InitialData.LeBlanc else None
+        discontinuity_location = (3.0 if problem == ne.InitialData.LeBlanc else
+                                  None)
         mass_density_ref, velocity_ref, pressure_ref = \
             riemann.riemann_problem_solution(
                 *ne.riemann_left_right_states(problem),
@@ -284,10 +303,11 @@ def main(problem, num_cells, numerical_flux, cfl):
         num_cells_original = num_cells
         num_cells = 5000
         _, x_ref, _, mass_density_ref, momentum_density_ref, \
-            energy_density_ref = do_solve(num_cells, problem, cfl,
-                                          recons.reconstruct,
-                                          recons.Scheme.Wcns3,
-                                          Derivative.Scheme.MD)
+            energy_density_ref, _, _ = do_solve(num_cells, problem, cfl,
+                                                recons.reconstruct,
+                                                recons.Scheme.Wcns3,
+                                                Derivative.Scheme.MD,
+                                                generate_spacetime_plots)
         num_cells = num_cells_original
         velocity_ref = momentum_density_ref / mass_density_ref
         pressure_ref = ne.compute_pressure(mass_density_ref,
@@ -301,10 +321,11 @@ def main(problem, num_cells, numerical_flux, cfl):
         num_cells_original = num_cells
         num_cells = 5000
         _, x_ref, _, mass_density_ref, momentum_density_ref, \
-            energy_density_ref = do_solve(num_cells, problem, cfl,
-                                          recons.reconstruct,
-                                          recons.Scheme.Wcns3,
-                                          Derivative.Scheme.MD)
+            energy_density_ref, _, _ = do_solve(num_cells, problem, cfl,
+                                                recons.reconstruct,
+                                                recons.Scheme.Wcns3,
+                                                Derivative.Scheme.MD,
+                                                generate_spacetime_plots)
         num_cells = num_cells_original
         velocity_ref = momentum_density_ref / mass_density_ref
         pressure_ref = ne.compute_pressure(mass_density_ref,
@@ -383,6 +404,25 @@ def main(problem, num_cells, numerical_flux, cfl):
         str(problem).replace("InitialData.", '') + str(num_cells) +
         "Order.pdf", exact_or_ref_plot_label, every_n)
 
+    if generate_spacetime_plots:
+        spacetime_history[-1][spacetime_history[-1] > 10] = 9
+        plot.generate_spacetime_plot(str(problem).replace("InitialData.", '') +
+                                     str(num_cells) + "SpacetimeDensity.pdf",
+                                     spacetime_history[0],
+                                     r"$\rho$",
+                                     x,
+                                     times,
+                                     True,
+                                     set_log_y=True)
+        plot.generate_spacetime_plot(str(problem).replace("InitialData.", '') +
+                                     str(num_cells) + "SpacetimeOrder.pdf",
+                                     spacetime_history[-1],
+                                     "Order",
+                                     x,
+                                     times,
+                                     False,
+                                     set_log_y=False)
+
 
 def parse_args():
     """
@@ -429,10 +469,17 @@ def parse_args():
                         type=float,
                         required=True,
                         help='The CFL factor to use.')
+    parser.add_argument('--spacetime-plot',
+                        dest='spacetime_plot',
+                        action='store_true')
+    parser.add_argument('--no-spacetime-plot',
+                        dest='spacetime_plot',
+                        action='store_false')
+    parser.set_defaults(spacetime_plot=False)
     return vars(parser.parse_args())
 
 
 if __name__ == "__main__":
     args = parse_args()
     main(args['problem'], args['number_of_cells'], args['numerical_flux'],
-         args['cfl'])
+         args['cfl'], args['spacetime_plot'])
