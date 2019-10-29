@@ -358,8 +358,8 @@ def main(problem, num_cells, numerical_flux, cfl):
         mass_density,
         mass_density_ref,
         "Density",
-        str(problem).replace("InitialData.", '') + "Density" + str(num_cells) +
-        ".pdf",
+        str(problem).replace("InitialData.", '') + str(num_cells) +
+        "Density.pdf",
         exact_or_ref_plot_label,
         every_n,
         set_log_y=(problem == ne.InitialData.LeBlanc))
@@ -369,19 +369,19 @@ def main(problem, num_cells, numerical_flux, cfl):
         ne.compute_pressure(mass_density, momentum_density, energy_density),
         pressure_ref,
         "Pressure",
-        str(problem).replace("InitialData.", '') + "Pressure" +
-        str(num_cells) + ".pdf",
+        str(problem).replace("InitialData.", '') + str(num_cells) +
+        "Pressure.pdf",
         exact_or_ref_plot_label,
         every_n,
         set_log_y=(problem == ne.InitialData.LeBlanc))
     plot.generate_plot_with_reference(
         x, x_ref, momentum_density / mass_density, velocity_ref, "Velocity",
-        str(problem).replace("InitialData.", '') + "Velocity" +
-        str(num_cells) + ".pdf", exact_or_ref_plot_label, every_n)
+        str(problem).replace("InitialData.", '') + str(num_cells) +
+        "Velocity.pdf", exact_or_ref_plot_label, every_n)
     plot.generate_plot_with_reference(
         x, x_ref, order_used, None, "Local Order",
-        str(problem).replace("InitialData.", '') + "Order" + str(num_cells) +
-        ".pdf", exact_or_ref_plot_label, every_n)
+        str(problem).replace("InitialData.", '') + str(num_cells) +
+        "Order.pdf", exact_or_ref_plot_label, every_n)
 
 
 def parse_args():
