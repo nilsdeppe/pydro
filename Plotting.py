@@ -4,6 +4,7 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.ticker as mtick
+import numpy as np
 
 # Use standard LaTeX font on plots
 mpl.rcParams['mathtext.fontset'] = 'cm'
@@ -73,4 +74,103 @@ def generate_plot_with_reference(x,
 
     if set_log_y:
         plt.yscale('log')
+    plt.savefig(file_name, transparent=True, format='pdf', bbox_inches='tight')
+
+
+def generate_spacetime_plot(file_name,
+                            var,
+                            var_name,
+                            x,
+                            times,
+                            smoothen,
+                            set_log_y,
+                            time_max_elements=100,
+                            x_max_elements=200):
+    print(
+        "Generating spacetime plot. This might take a minute. Please be patient."
+    )
+    every_n_time = 1
+    time_length = len(times)
+    if len(times) > time_max_elements:
+        every_n_time = len(times) // time_max_elements
+        time_length = len(times[0::every_n_time])
+
+    every_n_x = 1
+    if len(x) > x_max_elements:
+        every_n_x = len(x) // x_max_elements
+
+    times2 = np.zeros([len(x[0::every_n_x]), time_length])
+    for i in range(len(x[0::every_n_x])):
+        times2[i, :] = np.nanmean(
+            np.pad(times.astype(float),
+                   (0, 0 if times.size % every_n_time == 0 else every_n_time -
+                    times.size % every_n_time),
+                   mode='constant',
+                   constant_values=np.NaN).reshape(-1, every_n_time),
+            axis=1)
+
+    xs2 = np.zeros([len(x[0::every_n_x]), time_length])
+    for i in range(len(times[0::every_n_time])):
+        xs2[:, i] = np.nanmean(np.pad(
+            x.astype(float),
+            (0,
+             0 if x.size % every_n_x == 0 else every_n_x - x.size % every_n_x),
+            mode='constant',
+            constant_values=np.NaN).reshape(-1, every_n_x),
+                               axis=1)
+
+    # Deal with averaging the 2d array. First average space,
+    # then average time...
+    var_x_avg = np.zeros([var.shape[1] // every_n_x, var.shape[0]])
+    for time_index in range(var.shape[0]):
+        vari_copy = var[time_index, :]
+        var_x_avg[:, time_index] = np.nanmean(
+            np.pad(vari_copy.astype(float),
+                   (0, 0 if vari_copy.size % every_n_x == 0 else every_n_x -
+                    vari_copy.size % every_n_x),
+                   mode='constant',
+                   constant_values=np.NaN).reshape(-1, every_n_x),
+            axis=1)
+
+    var_avg = np.zeros([var_x_avg.shape[0], time_length])
+    for x_index in range(var_avg.shape[0]):
+        vari_copy = var_x_avg[x_index, :]
+        var_avg[x_index, :] = np.nanmean(np.pad(
+            vari_copy.astype(float),
+            (0, 0 if vari_copy.size % every_n_time == 0 else every_n_time -
+             vari_copy.size % every_n_time),
+            mode='constant',
+            constant_values=np.NaN).reshape(-1, every_n_time),
+                                         axis=1)
+
+    plt.clf()
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    fig.set_size_inches(6, 6, forward=True)
+    fontsize = 20
+
+    if set_log_y:
+        var_avg = np.log10(var_avg)
+        var_name = r"$\log_{10}($" + var_name + r"$)$"
+        var_name = var_name.replace("$$", "")
+
+    pcm = ax.pcolormesh(xs2,
+                        times2,
+                        var_avg,
+                        shading=('gouraud' if smoothen else 'flat'),
+                        edgecolors='face')
+
+    yfmt = _ScalarFormatterForceFormat()
+    cbar = fig.colorbar(pcm, ax=ax, pad=0.01, format=yfmt)
+    yfmt.set_powerlimits((0, 0))
+
+    ax.yaxis.set_major_formatter(yfmt)
+    ax.yaxis.offsetText.set_fontsize(fontsize - 4)
+
+    ax.xaxis.set_major_formatter(_ScalarFormatterForceFormat())
+    ax.xaxis.offsetText.set_fontsize(fontsize - 4)
+
+    # Move axis labels closer
+    ax.set_xlabel(r"$x$", fontsize=fontsize, labelpad=-5)
+    ax.set_ylabel(r"$t$", fontsize=fontsize)
+    plt.title(var_name, fontsize=fontsize)
     plt.savefig(file_name, transparent=True, format='pdf', bbox_inches='tight')
