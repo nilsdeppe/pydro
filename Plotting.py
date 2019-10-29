@@ -14,6 +14,14 @@ mpl.rcParams['legend.fontsize'] = 'large'
 mpl.rcParams['figure.titlesize'] = 'medium'
 
 
+# We force the formatting so that all rendered images are the same size.
+# pyplot will change the size of the plot depending on how many significant
+# digits are shown...
+class _ScalarFormatterForceFormat(mtick.ScalarFormatter):
+    def _set_format(self):  # Override function that finds format to use.
+        self.format = "%1.1f"  # Give format here
+
+
 def generate_plot_with_reference(x,
                                  x_ref,
                                  func,
@@ -23,13 +31,6 @@ def generate_plot_with_reference(x,
                                  ref_label,
                                  every_n=0,
                                  set_log_y=False):
-    # We force the formatting so that all rendered images are the same size.
-    # pyplot will change the size of the plot depending on how many significant
-    # digits are shown...
-    class ScalarFormatterForceFormat(mtick.ScalarFormatter):
-        def _set_format(self):  # Override function that finds format to use.
-            self.format = "%1.1f"  # Give format here
-
     if every_n == 0:
         every_n = len(x) // 50
     plt.clf()
@@ -58,13 +59,13 @@ def generate_plot_with_reference(x,
 
     plt.grid(b=True, which='major', linestyle='--')
 
-    yfmt = ScalarFormatterForceFormat()
+    yfmt = _ScalarFormatterForceFormat()
     yfmt.set_powerlimits((0, 0))
 
     ax.yaxis.set_major_formatter(yfmt)
     ax.yaxis.offsetText.set_fontsize(fontsize - 4)
 
-    ax.xaxis.set_major_formatter(ScalarFormatterForceFormat())
+    ax.xaxis.set_major_formatter(_ScalarFormatterForceFormat())
     ax.xaxis.offsetText.set_fontsize(fontsize - 4)
 
     if quantity_name != "Local Order":
