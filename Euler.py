@@ -296,6 +296,8 @@ def main(problem, num_cells, numerical_flux, cfl):
         exact_or_ref_plot_label = "Reference"
     elif problem == ne.InitialData.InteractingBlastWaves:
         # Compute reference solution for interacting blast waves
+        print("Generating high-resolution reference solution. "
+              "This will take a few minutes...")
         num_cells_original = num_cells
         num_cells = 5000
         _, x_ref, _, mass_density_ref, momentum_density_ref, \
@@ -401,6 +403,7 @@ def parse_args():
         "  ShuOsher: 400\n"
         "  Severe*: 200\n"
         "  1-2-3 problem: 400\n"
+        "  Interacting blast waves: 400\n"
         "  LeBlanc: 800\n"
         "  Sedov: 800\n")
     parser.add_argument('--problem',
