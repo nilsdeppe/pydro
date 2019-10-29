@@ -190,6 +190,7 @@ def riemann_problem_solution(left_density,
                         state.velocity - xi[i]) / sound_speed:
                     density[i] = 0.0
                     pressure[i] = 0.0
+                    velocity[i] = 0.0
                 else:
                     density[i] = state.density * (
                         2.0 / (gamma + 1.0) - side_sign * gamma_fac *
@@ -199,8 +200,8 @@ def riemann_problem_solution(left_density,
                         2.0 / (gamma + 1.0) - side_sign * gamma_fac *
                         (state.velocity - xi[i]) / sound_speed)**(
                             2.0 * gamma / (gamma - 1.0))
-                velocity[i] = 2.0 / (
-                    gamma + 1.0) * (-side_sign * sound_speed + 0.5 *
-                                    (gamma - 1.0) * state.velocity + xi[i])
+                    velocity[i] = 2.0 / (
+                        gamma + 1.0) * (-side_sign * sound_speed + 0.5 *
+                                        (gamma - 1.0) * state.velocity + xi[i])
 
     return density, velocity, pressure
