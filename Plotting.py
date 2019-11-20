@@ -1,7 +1,6 @@
 # copyright Nils Deppe 2019
 # (See accompanying file LICENSE.md or copy at http://boost.org/LICENSE_1_0.txt)
 
-import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.ticker as mtick
 import numpy as np
@@ -13,6 +12,9 @@ mpl.rcParams['mathtext.rm'] = 'serif'
 mpl.rcParams['font.size'] = 12
 mpl.rcParams['legend.fontsize'] = 'large'
 mpl.rcParams['figure.titlesize'] = 'medium'
+mpl.use('Agg')
+
+import matplotlib.pyplot as plt
 
 
 # We force the formatting so that all rendered images are the same size.
