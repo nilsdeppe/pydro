@@ -37,6 +37,53 @@ class Rk3Ssp:
         self._time += dt
 
 
+class Rk4Ssp:
+    """
+    A fourth-order SSP nonlinear Runge-Kutta method.
+    """
+    _compute_time_deriv = None
+    _evolved_vars = None
+    _time = None
+    _cfl_coefficient = 1.508
+
+    def __init__(self, time_deriv, initial_state, initial_time):
+        self._compute_time_deriv = time_deriv
+        self._evolved_vars = np.copy(initial_state)
+        self._time = initial_time
+
+    def get_evolved_vars(self):
+        return self._evolved_vars
+
+    def get_time(self):
+        return self._time
+
+    def get_cfl_coefficient(self):
+        return self._cfl_coefficient
+
+    def take_step(self, dt):
+        k0 = self._compute_time_deriv(self._evolved_vars, self._time)
+        v1 = self._evolved_vars + 0.39175222657189 * dt * k0
+
+        k1 = self._compute_time_deriv(v1, None)
+        v2 = (0.444370493651235 * self._evolved_vars + 0.555629506348765 * v1 +
+              0.368410593050371 * dt * k1)
+
+        k2 = self._compute_time_deriv(v2, None)
+        v3 = (0.620101851488403 * self._evolved_vars + 0.379898148511597 * v2 +
+              0.251891774271694 * dt * k2)
+
+        k3 = self._compute_time_deriv(v3, None)
+        v4 = (0.178079954393132 * self._evolved_vars + 0.821920045606868 * v3 +
+              0.544974750228521 * dt * k3)
+
+        k4 = self._compute_time_deriv(v4, None)
+        self._evolved_vars = (0.517231671970585 * v2 + 0.096059710526147 * v3 +
+                              0.063692468666290 * dt * k3 +
+                              0.386708617503269 * v4 +
+                              0.226007483236906 * dt * k4)
+        self._time += dt
+
+
 class LinearRk4Ssp:
     """
     A fourth-order SSP linear Runge-Kutta method from
