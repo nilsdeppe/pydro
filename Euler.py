@@ -419,7 +419,7 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
                                      r"$\rho$",
                                      x,
                                      times,
-                                     True,
+                                     smoothen=True,
                                      set_log_y=True)
         plot.generate_spacetime_plot(str(problem).replace("InitialData.", '') +
                                      str(num_cells) + "SpacetimeOrder.pdf",
@@ -427,7 +427,7 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
                                      "Order",
                                      x,
                                      times,
-                                     False,
+                                     smoothen=False,
                                      set_log_y=False)
 
 
