@@ -241,6 +241,8 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
     spacetime_history = [[]
                          for _ in range(len(stepper.get_evolved_vars()) + 1)]
 
+    time_index = 0
+
     while stepper.get_time() <= final_time:
         mass_density, momentum_density, energy_density = stepper.get_evolved_vars(
         )
@@ -255,6 +257,9 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
             stepper.take_step(dt)
             break
         stepper.take_step(dt)
+        time_index += 1
+        if time_index % 400 == 0:
+            print("Time: ", stepper.get_time())
         if generate_spacetime_plots:
             for var_index in range(len(stepper.get_evolved_vars())):
                 spacetime_history[var_index].append(
