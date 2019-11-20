@@ -233,7 +233,7 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
                                    reconstructor, reconstruction_scheme,
                                    deriv_scheme)
 
-    stepper = TimeStepper.Rk3Ssp(
+    stepper = TimeStepper.Rk4Ssp(
         ne1d_solver,
         np.asarray([mass_density, momentum_density, energy_density]), time)
 
