@@ -42,6 +42,7 @@ class NumericalFlux(enum.IntEnum):
 class InitialData(enum.IntEnum):
     InteractingBlastWaves = enum.auto()
     Sod = enum.auto()
+    LaneEmden = enum.auto()
     Lax = enum.auto()
     LeBlanc = enum.auto()
     Mach1200 = enum.auto()
@@ -165,7 +166,8 @@ def is_riemann_problem(problem):
     """
     return (problem != InitialData.ShuOsher and problem != InitialData.Sedov
             and problem != InitialData.Sinusoid
-            and problem != InitialData.InteractingBlastWaves)
+            and problem != InitialData.InteractingBlastWaves
+            and problem != InitialData.LaneEmden)
 
 
 def set_initial_data(num_points, initial_data):
@@ -222,6 +224,27 @@ def set_initial_data(num_points, initial_data):
 
         boundary_condition = [
             BoundaryCondition.Reflecting, BoundaryCondition.Reflecting
+        ]
+    elif initial_data == InitialData.LaneEmden:
+        set_gamma(2.0)
+        set_symmetry(Symmetry.Spherical)
+        # x = create_grid(1.5, 4.0, num_points)
+        x = create_grid(0.0, 2.0 * np.pi, num_points)
+
+        initial_time = 0.0
+        final_time = 100.0
+
+        star_mask = np.abs(x) < np.pi - 1.0e-19
+
+        mass_density = np.full(len(x), 1.0e-20)
+        mass_density[star_mask] = np.abs(np.sin(x[star_mask]) / x[star_mask])
+
+        # polytropic constant K = 1, and rho_c = 1
+        pressure = mass_density**2
+        velocity = np.full(len(x), 0.0)
+
+        boundary_condition = [
+            BoundaryCondition.Constant, BoundaryCondition.Constant
         ]
     elif initial_data == InitialData.ShuOsher:
         set_gamma(1.4)

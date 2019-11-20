@@ -372,6 +372,18 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
         velocity_ref = np.ones(len(x))
         pressure_ref = np.ones(len(x))
         exact_or_ref_plot_label = "Exact"
+    elif problem == ne.InitialData.LaneEmden:
+        x_ref = x
+        star_mask = star_mask = np.abs(x) < np.pi - 1.0e-19
+
+        mass_density_ref = np.full(len(x), 1.0e-20)
+        mass_density_ref[star_mask] = np.abs(
+            np.sin(x[star_mask]) / x[star_mask])
+
+        # polytropic constant K = 1, and rho_c = 1
+        pressure_ref = mass_density_ref**2
+        velocity_ref = np.full(len(x), 0.0)
+        exact_or_ref_plot_label = "Exact"
     else:
         import matplotlib.pyplot as plt
         plt.plot(x, mass_density, 'o')
@@ -390,7 +402,8 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
         "Density.pdf",
         exact_or_ref_plot_label,
         every_n,
-        set_log_y=(problem == ne.InitialData.LeBlanc))
+        set_log_y=(problem == ne.InitialData.LeBlanc
+                   or problem == ne.InitialData.LaneEmden))
     plot.generate_plot_with_reference(
         x,
         x_ref,
@@ -401,7 +414,8 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
         "Pressure.pdf",
         exact_or_ref_plot_label,
         every_n,
-        set_log_y=(problem == ne.InitialData.LeBlanc))
+        set_log_y=(problem == ne.InitialData.LeBlanc
+                   or problem == ne.InitialData.LaneEmden))
     plot.generate_plot_with_reference(
         x, x_ref, momentum_density / mass_density, velocity_ref, "Velocity",
         str(problem).replace("InitialData.", '') + str(num_cells) +
@@ -429,6 +443,24 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
                                      times,
                                      smoothen=False,
                                      set_log_y=False)
+
+        if problem == ne.InitialData.LaneEmden:
+            for i in range(spacetime_history[0].shape[0]):
+                spacetime_history[0][i] = (
+                    np.abs(spacetime_history[0][i] - mass_density_ref) /
+                    mass_density_ref + 1.0e-20)
+
+            plot.generate_spacetime_plot(
+                str(problem).replace("InitialData.", '') + str(num_cells) +
+                "SpacetimeDensityError.pdf",
+                spacetime_history[0],
+                r"$\lvert\rho-\rho_{\mathrm{exact}}\rvert$",
+                x,
+                times,
+                vmin=-7,
+                vmax=0,
+                smoothen=True,
+                set_log_y=True)
 
 
 def parse_args():
