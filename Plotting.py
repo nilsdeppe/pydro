@@ -84,6 +84,8 @@ def generate_spacetime_plot(file_name,
                             times,
                             smoothen,
                             set_log_y,
+                            vmin=None,
+                            vmax=None,
                             time_max_elements=100,
                             x_max_elements=200):
     print(
@@ -156,6 +158,8 @@ def generate_spacetime_plot(file_name,
     pcm = ax.pcolormesh(xs2,
                         times2,
                         var_avg,
+                        vmax=vmax,
+                        vmin=vmin,
                         shading=('gouraud' if smoothen else 'flat'),
                         edgecolors='face')
 
