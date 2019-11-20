@@ -369,7 +369,9 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
         exact_or_ref_plot_label = "Exact"
     else:
         import matplotlib.pyplot as plt
-        plt.plot(x, mass_density)
+        plt.plot(x, mass_density, 'o')
+        plt.title("t=%1.3e" % (time))
+        plt.yscale('log')
         plt.show()
         return None
 
