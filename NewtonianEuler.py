@@ -590,48 +590,28 @@ else:
     hllc_helper = _hllc_helper
 
 
-def compute_numerical_flux(recons_evolved_vars):
-
-    mass_f, momentum_f, energy_f = compute_flux(recons_evolved_vars)
-
-    reconstructed_mass_density = recons_evolved_vars[0]
-    reconstructed_momentum_density = recons_evolved_vars[1]
-    reconstructed_energy_density = recons_evolved_vars[2]
-
-    recons_evolved_vars[0][recons_evolved_vars[0] == 0.0] = 1.0e-30
-
-    pressure = compute_pressure(reconstructed_mass_density,
-                                reconstructed_momentum_density,
-                                reconstructed_energy_density)
-    sound_speed = compute_sound_speed(reconstructed_mass_density, pressure)
-
-    velocity = reconstructed_momentum_density / reconstructed_mass_density
+def compute_numerical_flux(mass_density, momentum_density, energy_density,
+                           mass_f, momentum_f, energy_f, velocity, pressure,
+                           sound_speed):
     if _numerical_flux == NumericalFlux.Rusanov:
-        # Rusanov flux below
         lf_speed = abs(velocity) + sound_speed
 
         return rusanov_helper(lf_speed, mass_f, momentum_f, energy_f,
-                              reconstructed_mass_density,
-                              reconstructed_momentum_density,
-                              reconstructed_energy_density)
+                              mass_density, momentum_density, energy_density)
     elif _numerical_flux == NumericalFlux.Hll:
         velocity_p_cs = velocity + sound_speed
         velocity_m_cs = velocity - sound_speed
 
         return hll_helper(velocity_p_cs, velocity_m_cs, mass_f, momentum_f,
-                          energy_f, reconstructed_mass_density,
-                          reconstructed_momentum_density,
-                          reconstructed_energy_density)
+                          energy_f, mass_density, momentum_density,
+                          energy_density)
     elif _numerical_flux == NumericalFlux.Hlle:
         return hlle_helper(velocity, sound_speed, mass_f, momentum_f, energy_f,
-                           reconstructed_mass_density,
-                           reconstructed_momentum_density,
-                           reconstructed_energy_density)
+                           mass_density, momentum_density, energy_density)
     elif _numerical_flux == NumericalFlux.Hllc:
         return hllc_helper(velocity, sound_speed, pressure, mass_f, momentum_f,
-                           energy_f, reconstructed_mass_density,
-                           reconstructed_momentum_density,
-                           reconstructed_energy_density)
+                           energy_f, mass_density, momentum_density,
+                           energy_density)
     else:
         raise ValueError("Unknown numerical flux")
 

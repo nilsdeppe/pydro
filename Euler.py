@@ -39,6 +39,8 @@ class NewtonianEuler1d:
 
     _order_used = None
 
+    _density_lower_bound = 1.0e-30
+
     def __init__(self, reconstruct_prims, x, boundary_conditions,
                  reconstructor, reconstruction_scheme, deriv_scheme):
         self._reconstruct_prims = reconstruct_prims
@@ -178,16 +180,29 @@ class NewtonianEuler1d:
             recons_prim = self._reconstructor(primitive_vars,
                                               self._reconstruction_scheme,
                                               self._order_used)
+            recons_prim[0][recons_prim[0] == 0.0] = self._density_lower_bound
             recons_conserved = ne.compute_conserved(recons_prim)
         else:
             recons_conserved = self._reconstructor(evolved_vars,
                                                    self._reconstruction_scheme,
                                                    self._order_used)
+            recons_conserved[0][recons_conserved[0] ==
+                                0.0] = self._density_lower_bound
+            recons_prim = ne.compute_primitives(recons_prim, recons_conserved)
 
-        # Bound the mass density below by 10^{-100}
-        recons_conserved[0][recons_conserved[0] == 0.0] = 1.0e-100
-
-        numerical_fluxes_at_faces = ne.compute_numerical_flux(recons_conserved)
+        recons_flux = ne.compute_flux(recons_conserved)
+        recons_sound_speed = ne.compute_sound_speed(recons_prim[0],
+                                                    recons_prim[2])
+        numerical_fluxes_at_faces = ne.compute_numerical_flux(
+            mass_density=recons_prim[0],
+            momentum_density=recons_conserved[1],
+            energy_density=recons_conserved[2],
+            mass_f=recons_flux[0],
+            momentum_f=recons_flux[1],
+            energy_f=recons_flux[2],
+            velocity=recons_prim[1],
+            pressure=recons_prim[2],
+            sound_speed=recons_sound_speed)
 
         dt_evolved_vars = -1.0 * self._flux_deriv(
             numerical_fluxes_at_faces,
