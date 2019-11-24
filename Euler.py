@@ -190,7 +190,10 @@ class NewtonianEuler1d:
                                 0.0] = self._density_lower_bound
             recons_prim = ne.compute_primitives(recons_prim, recons_conserved)
 
-        recons_flux = ne.compute_flux(recons_conserved)
+        recons_flux = ne.compute_flux(mass_density=recons_conserved[0],
+                                      momentum_density=recons_conserved[1],
+                                      energy_density=recons_conserved[2],
+                                      pressure=recons_prim[2])
         recons_sound_speed = ne.compute_sound_speed(recons_prim[0],
                                                     recons_prim[2])
         numerical_fluxes_at_faces = ne.compute_numerical_flux(
@@ -204,14 +207,34 @@ class NewtonianEuler1d:
             pressure=recons_prim[2],
             sound_speed=recons_sound_speed)
 
-        dt_evolved_vars = -1.0 * self._flux_deriv(
-            numerical_fluxes_at_faces,
-            ne.compute_flux(
-                self._extend_for_boundary_conditions(evolved_vars) if
-                (self._boundary_conditions != [
-                    ne.BoundaryCondition.Constant, ne.BoundaryCondition.
-                    Constant
-                ]) else evolved_vars))
+        # Note: the cell-center flux computation could be elided completely
+        # if MD instead of MND derivatives are used.
+        cell_center_fluxes = None
+        if (self._boundary_conditions !=
+            [ne.BoundaryCondition.Constant, ne.BoundaryCondition.Constant]):
+            extended_vars = self._extend_for_boundary_conditions(evolved_vars)
+            cell_center_pressure = ne.compute_pressure(
+                mass_density=extended_vars[0],
+                momentum_density=extended_vars[1],
+                energy_density=extended_vars[2])
+            cell_center_fluxes = ne.compute_flux(
+                mass_density=extended_vars[0],
+                momentum_density=extended_vars[1],
+                energy_density=extended_vars[2],
+                pressure=cell_center_pressure)
+        else:
+            cell_center_pressure = ne.compute_pressure(
+                mass_density=evolved_vars[0],
+                momentum_density=evolved_vars[1],
+                energy_density=evolved_vars[2])
+            cell_center_fluxes = ne.compute_flux(
+                mass_density=evolved_vars[0],
+                momentum_density=evolved_vars[1],
+                energy_density=evolved_vars[2],
+                pressure=cell_center_pressure)
+
+        dt_evolved_vars = -1.0 * self._flux_deriv(numerical_fluxes_at_faces,
+                                                  cell_center_fluxes)
 
         if ne.get_symmetry() != 0:
             dt_evolved_vars += ne.compute_sources(self._x, evolved_vars)

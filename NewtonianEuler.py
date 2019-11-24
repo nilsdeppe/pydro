@@ -367,11 +367,7 @@ def compute_sound_speed(mass_density, pressure):
     return np.sqrt(_gamma * pressure / mass_density)
 
 
-def compute_flux(evolved_vars):
-    mass_density = evolved_vars[0]
-    momentum_density = evolved_vars[1]
-    energy_density = evolved_vars[2]
-    pressure = compute_pressure(mass_density, momentum_density, energy_density)
+def compute_flux(mass_density, momentum_density, energy_density, pressure):
     mass_density_flux = momentum_density
     momentum_density_flux = momentum_density**2 / mass_density + pressure
     energy_density_flux = (energy_density +
