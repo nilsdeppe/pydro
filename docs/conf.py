@@ -18,7 +18,7 @@ from pybtex.style.formatting.unsrt import Style as UnsrtStyle
 from pybtex.style.labels import BaseLabelStyle
 from pybtex.plugin import register_plugin
 
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../pydro'))
 
 # -- Project information -----------------------------------------------------
 
