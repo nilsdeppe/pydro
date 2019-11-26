@@ -1,9 +1,12 @@
 # Pydro - Simple hydro experiments
 
+[![Documentation Status](https://readthedocs.org/projects/pydro/badge/?version=latest)](https://pydro.readthedocs.io/en/latest/?badge=latest)
+
 Pydro is a collection of reconstruction schemes and other components needed to
 solve systems of equations that can develop discontinuities, such as Burgers
 equation, and compressible Newtonian Euler. If Numba is available the code will
-be JITed for better performance.
+be JITed for better performance. Documentation is provided by
+[ReadTheDocs](https://pydro.readthedocs.io).
 
 The implemented numerical schemes are:
 - Time steppers:
