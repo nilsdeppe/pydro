@@ -13,11 +13,183 @@ except:
 
 @enum.unique
 class Scheme(enum.Enum):
+    """
+    An enum of the various different reconstruction
+    schemes that are supported.
+    """
+
+    #: Minmod reconstruction.
+    #:
+    #: Minmod reconstruction is performed as
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:       \sigma_j=\mathrm{minmod} \left(\frac{q_i-q_{i-1}}{\Delta\xi},
+    #:       \frac{q_{i+1}-q_i}{\Delta\xi}\right).
+    #:   \end{align}
+    #:
+    #: where :math:`\Delta\xi` is the grid spacing and
+    #: :math:`\mathrm{minmod}(a,b)` is defined as
+    #:
+    #: .. math::
+    #:
+    #:   \begin{align}
+    #:     &\mathrm{minmod}(a,b)= \notag \\
+    #:   &\left\{
+    #:   \begin{array}{ll}
+    #:     \mathrm{sgn}(a)\min(\lvert a\rvert, \lvert b\rvert)
+    #:      & \mathrm{if} \; \mathrm{sgn}(a)=\mathrm{sgn}(b) \\
+    #:     0 & \mathrm{otherwise}
+    #:   \end{array}\right.
+    #:  \end{align}
+    #:
+    #: The reconstructed solution at the faces is given by
+    #:
+    #: .. math::
+    #:   \hat{q}_{i+1/2} = q_i +\frac{\Delta\xi}{2}\sigma_i
+    #:
+    #: See, e.g. section 9.3.1 of :cite:`RezzollaBook` for a discussion.
     Minmod = enum.auto()
+    #: Third order weighted compact nonlinear scheme reconstruction
+    #: :cite:`DENG200022`.
+    #:
+    #: Third order WCNS3 reconstruction is done by first defining
+    #: oscillation indicators :math:`\beta_0` and :math:`\beta_1` as
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:     \beta_0 &= (q_i - q_{i-1})^2 \\
+    #:     \beta_1 &= (q_{i+1} - q_{i})^2
+    #:   \end{align}
+    #:
+    #: Then coefficients :math:`\alpha_k` are defined as
+    #:
+    #: .. math::
+    #:   \alpha_k = \frac{c_k}{(\beta_k + \epsilon_k)^2}
+    #:
+    #: where :math:`\epsilon_k` is a factor used to avoid division
+    #: by zero and is set to
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:     \epsilon_0 &= 10^{-17}\left(1 + |q_{i}| + |q_{i-1}|\right) \\
+    #:     \epsilon_1 &= 10^{-17}\left(1 + |q_{i}| + |q_{i+1}|\right)
+    #:   \end{align}
+    #:
+    #: and the linear weights are :math:`c_0=1/4` and :math:`c_1=3/4`.
+    #: Finally, we define the nonlinear weights:
+    #:
+    #: .. math::
+    #:   \omega_k=\frac{\alpha_k}{\sum_{k=0}^{1}\alpha_k}
+    #:
+    #: The reconstruction stencils are given by:
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:     q^0_{i+1/2}&=\frac{3}{2}q_i-\frac{1}{2}q_{i-1} \\
+    #:     q^1_{i+1/2}&=\frac{1}{2}q_i+\frac{1}{2}q_{i+1}
+    #:   \end{align}
+    #:
+    #: The final reconstructed solution is given by
+    #:
+    #: .. math::
+    #:   \hat{q}_{i+1/2}=\sum_{k=0}^{1}\omega_k q^k_{i+1/2}
     Wcns3 = enum.auto()
+    #: Third order weighted essentially non-oscillarity reconstruction.
+    #:
+    #: The same as the :py:meth:`Wcns3` reconstruction except with
+    #: :math:`c_0=1/3` and :math:`c_1=2/3`.
     Weno3 = enum.auto()
+    #: Fifth order weighted compact nonlinear scheme reconstruction
+    #: :cite:`Nonomura20138`.
+    #:
+    #: The oscillation indicators are given by
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:     \beta_0 &= \frac{1}{4}\left(q_{i-2}-4 q_{i-1}+3 q_{i}\right)^2
+    #:               + \left(q_{i-2}-2 q_{i-1} + q_{i}\right)^2 \\
+    #:     \beta_1 &= \frac{1}{4}\left(q_{i-1} - q_{i+1}\right)^2
+    #:               + \left(q_{i-1} - 2 q_{i+1}\right)^2 \\
+    #:     \beta_2 &= \frac{1}{4}\left(3 q_{i}-4 q_{i+1}+q_{i+2}\right)^2
+    #:               + \left(q_{i} - 2 q_{i+1} + q_{i+2}\right)^2
+    #:   \end{align}
+    #:
+    #: Then coefficients :math:`\alpha_k` are defined as
+    #:
+    #: .. math::
+    #:   \alpha_k = \frac{c_k}{(\beta_k + \epsilon_k)^2}
+    #:
+    #: where :math:`\epsilon_k` is a factor used to avoid division
+    #: by zero and is set to
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:     \epsilon_0 &= 2\times10^{-16}\left(1 + |q_{i}| + |q_{i-1}|
+    #:                   + |q_{i-2}|\right) \\
+    #:     \epsilon_1 &= 2\times10^{-16}\left(1 + |q_{i}| + |q_{i+1}|
+    #:                   + |q_{i-1}|\right) \\
+    #:     \epsilon_2 &= 2\times10^{-16}\left(1 + |q_{i}| + |q_{i+1}|
+    #:                   + |q_{i+2}|\right)
+    #:   \end{align}
+    #:
+    #: and the linear weights are :math:`c_0=1/16, c_1=10/16`, and
+    #: :math:`c_2=5/16`. Finally, we define the nonlinear weights:
+    #:
+    #: .. math::
+    #:   \omega_k=\frac{\alpha_k}{\sum_{k=0}^{2}\alpha_k}
+    #:
+    #: The reconstruction stencils are given by:
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:     q^0_{i+1/2}&=\frac{3}{8}q_{i-2} - \frac{5}{4}q_{i-1}
+    #:                  + \frac{15}{8}q_i, \\
+    #:     q^1_{i+1/2}&=-\frac{1}{8}q_{i-1} + \frac{3}{4}q_i
+    #:                  + \frac{3}{8}q_{i+1}, \\
+    #:     q^2_{i+1/2}&=\frac{3}{8}q_i + \frac{3}{4}q_{i+1}
+    #:                  - \frac{1}{8}q_{i+2}.
+    #:   \end{align}
+    #:
+    #: The final reconstructed solution is given by
+    #:
+    #: .. math::
+    #:   \hat{q}_{i+1/2}=\sum_{k=0}^{2}\omega_k q^k_{i+1/2}
     Wcns5 = enum.auto()
+    #: Fifth order weighted compact nonlinear scheme reconstruction
+    #: with the :math:`Z` oscillation indicator.
+    #:
+    #: Follows the procedure of :py:meth:`Wcns5` except using the
+    #: oscillation indicators given by
+    #:
+    #: .. math::
+    #:     \beta_k^Z =\frac{\beta_k+\epsilon_k}{\beta_k +
+    #:                 \tau_5 + \epsilon_k}
+    #:
+    #: where
+    #:
+    #: .. math::
+    #:   \tau_5 = |\beta_2 - \beta_0|
+    #:
+    #: and the oscillation indicators are the ones from Jiang and
+    #: Shu :cite:`JIANG1996202`, as described in :py:meth:`Wcns5Weno`.
     Wcns5z = enum.auto()
+    #: Fifth order weighted compact nonlinear scheme reconstruction
+    #: with the Jiang and Shu :cite:`JIANG1996202` weights.
+    #:
+    #: Follows the procedure of :py:meth:`Wcns5` except using the
+    #: oscillation indicators given by
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:     \beta_0 &=\frac{1}{4}\left(q_{i-2}-4q_{i-1}+3q_i\right)^2
+    #:              +\frac{13}{12}\left(q_{i-2}-2q_{i-1}+q_i\right)^2 \\
+    #:     \beta_1 &=\frac{1}{4}\left(q_{i-1}-q_{i+1}\right)^2
+    #:              +\frac{13}{12}\left(q_{i-1} - 2 q_{i+1}\right)^2 \\
+    #:     \beta_2 &=\frac{1}{4}\left(-3q_i+4q_{i+1}-q_{i+2}\right)^2
+    #:              +\frac{13}{12}\left(q_i-2q_{i+1}+q_{i+2}\right)^2.
+    #:   \end{align}
+    #:
     Wcns5Weno = enum.auto()
     Mp5 = enum.auto()
 
@@ -267,6 +439,21 @@ _recons_dispatch = {
 
 
 def reconstruct(vars_to_reconstruct, scheme, order_used):
+    """
+    Reconstructs all variables using the requested scheme.
+
+    :param vars_to_reconstruct: The variables at the cell centers.
+    :type vars_to_reconstruct: list of list of double
+
+    :param Scheme scheme: The reconstruction scheme to use.
+
+    :param order_used: Filled by the function and is used to return
+        the order of the reconstruction used.
+    :type order_used: list of int
+
+    :return: (`list of list of double`) The face reconstructed variables.
+        Each variable is of length `2 * number_of_cells`
+    """
     reconstructed_vars = [None] * len(vars_to_reconstruct)
     for i in range(len(vars_to_reconstruct)):
         extents = np.asarray([len(vars_to_reconstruct[i])])
