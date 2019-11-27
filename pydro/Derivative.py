@@ -13,16 +13,113 @@ except:
 
 @enum.unique
 class Scheme(enum.Enum):
+    """
+    An enum of the various different differentiation routines
+    that are supported.
+    """
+
+    #: Second-order finite-difference derivative :cite:`Nonomura20138`
+    #:
+    #: .. math::
+    #:   \frac{\partial q_i}{\partial x}\approx
+    #:   \frac{q_{i+1/2}-q_{i-1/2}}{\Delta x}
     MD = enum.auto()
+    #: Fourth-order finite-difference derivative using only face values
+    #: :cite:`Nonomura20138`
+    #:
+    #: .. math::
+    #:   \frac{\partial q_i}{\partial x}\approx
+    #:   \frac{1}{\Delta x}\left[\frac{9}{8}(q_{i+1/2}-q_{i-1/2})-
+    #:   \frac{1}{24}(q_{i+3/2}-q_{i-3/2})\right]
     MD4 = enum.auto()
+    #: Sixth-order finite-difference derivative using only face values
+    #: :cite:`Nonomura20138`
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:   \frac{\partial q_i}{\partial x}&\approx
+    #:   \frac{1}{\Delta x}\left[
+    #:   \frac{75}{64}(q_{i+1/2}-q_{i-1/2})-
+    #:   \frac{25}{384}(q_{i+3/2}-q_{i-3/2})\right. \\
+    #:   &\left.+\frac{3}{640}(q_{i+5/2}-q_{i-5/2})\right]
+    #:   \end{align}
     MD6 = enum.auto()
+    #: Eighth-order finite-difference derivative using only face values
+    #: :cite:`Nonomura20138`
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:   \frac{\partial q_i}{\partial x}&\approx
+    #:   \frac{1}{\Delta x}\left[
+    #:   \frac{1225}{1024}(q_{i+1/2}-q_{i-1/2})-
+    #:   \frac{245}{3072}(q_{i+3/2}-q_{i-3/2})\right. \\
+    #:   &\left.+\frac{49}{5120}(q_{i+5/2}-q_{i-5/2})-
+    #:   \frac{5}{7168}(q_{i+7/2}-q_{i-7/2})\right]
+    #:   \end{align}
     MD8 = enum.auto()
+    #: Tenth-order finite-difference derivative using only face values
+    #: :cite:`Nonomura20138`
+    #:
+    #: .. math::
+    #:   \begin{align}
+    #:   \frac{\partial q_i}{\partial x}&\approx
+    #:   \frac{1}{\Delta x}\left[
+    #:   \frac{19845}{16384}(q_{i+1/2}-q_{i-1/2})-
+    #:   \frac{735}{8192}(q_{i+3/2}-q_{i-3/2})\right. \\
+    #:   &\left.+\frac{567}{40960}(q_{i+5/2}-q_{i-5/2})-
+    #:   \frac{405}{229376}(q_{i+7/2}-q_{i-7/2})\right. \\
+    #:   &\left.+\frac{35}{294912}(q_{i+9/2}-q_{i-9/2})\right]
+    #:   \end{align}
     MD10 = enum.auto()
+    #: Variable-order finite-difference derivative using only face
+    #: values.
+    #:
+    #: The order is adjusted according to the `order_used` argument
+    #: passed to :py:func:`Derivative.differentiate_flux`
     MDV = enum.auto()
+    #: Fourth-order finite-difference derivative using face and node
+    #: values (MND) :cite:`Nonomura20138`
+    #:
+    #: .. math::
+    #:   \frac{\partial q_i}{\partial x}\approx
+    #:   \frac{1}{\Delta x}\left[\frac{4}{3}(q_{i+1/2}-q_{i-1/2})-
+    #:   \frac{1}{6}(q_{i+1}-q_{i-1})\right]
     MND4 = enum.auto()
+    #: Sixth-order finite-difference derivative using face and node
+    #: values (MND) :cite:`Nonomura20138`
+    #:
+    #: .. math::
+    #:   \frac{\partial q_i}{\partial x}&\approx
+    #:   \frac{1}{\Delta x}\left[\frac{3}{2}(q_{i+1/2}-q_{i-1/2})-
+    #:   \frac{3}{10}(q_{i+1}-q_{i-1})\right. \\
+    #:   &\left.+\frac{1}{30}(q_{i+3/2}-q_{i-3/2})\right]
     MND6 = enum.auto()
+    #: Eigth-order finite-difference derivative using face and node
+    #: values (MND) :cite:`Nonomura20138`
+    #:
+    #: .. math::
+    #:   \frac{\partial q_i}{\partial x}&\approx
+    #:   \frac{1}{\Delta x}\left[\frac{8}{5}(q_{i+1/2}-q_{i-1/2})-
+    #:   \frac{2}{5}(q_{i+1}-q_{i-1})\right. \\
+    #:   &\left.+\frac{8}{105}(q_{i+3/2}-q_{i-3/2})-
+    #:   \frac{1}{140}(q_{i+2}-q_{i-2})\right]
     MND8 = enum.auto()
+    #: Tenth-order finite-difference derivative using face and node
+    #: values (MND) :cite:`Nonomura20138`
+    #:
+    #: .. math::
+    #:   \frac{\partial q_i}{\partial x}&\approx
+    #:   \frac{1}{\Delta x}\left[\frac{5}{3}(q_{i+1/2}-q_{i-1/2})-
+    #:   \frac{10}{21}(q_{i+1}-q_{i-1})\right. \\
+    #:   &\left.+\frac{5}{42}(q_{i+3/2}-q_{i-3/2})-
+    #:   \frac{5}{252}(q_{i+2}-q_{i-2})\right. \\
+    #:   &\left.+\frac{1}{630}(q_{i+5/2}-q_{i-5/2})\right]
     MND10 = enum.auto()
+    #: Variable-order finite-difference derivative using face and node
+    #: values (MND).
+    #:
+    #: The order is adjusted according to the `order_used` argument
+    #: passed to :py:func:`Derivative.differentiate_flux`
     MNDV = enum.auto()
 
 
@@ -368,5 +465,21 @@ def differentiate_flux(scheme,
                        numerical_fluxes,
                        center_flux=None,
                        order_used=None):
+    """
+    Compute the derivatives using the `scheme` and spacing `dx`.
+
+    Applies the finite-difference scheme given by the `scheme` argument
+    to all variables in the `numerical_fluxes`.
+
+
+    :param Derivative.Scheme scheme: The finite-difference scheme to use.
+    :param double dx: The grid spacing
+    :param list numerical_fluxes: The numerical fluxes at the cell faces.
+    :param list center_flux: The flux at the cell centers. Only needed
+        for MND schemes.
+    :param list order_used: A list of `int` at each cell indicating the
+        finite-difference order to use at the cell. Normally this order
+        is determined by the reconstruction scheme.
+    """
     return np.asarray(_deriv_dispatch[scheme](dx, np.asarray(numerical_fluxes),
                                               center_flux, order_used))

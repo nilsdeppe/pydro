@@ -445,7 +445,7 @@ def reconstruct(vars_to_reconstruct, scheme, order_used):
     :param vars_to_reconstruct: The variables at the cell centers.
     :type vars_to_reconstruct: list of list of double
 
-    :param Scheme scheme: The reconstruction scheme to use.
+    :param Reconstruction.Scheme scheme: The reconstruction scheme to use.
 
     :param order_used: Filled by the function and is used to return
         the order of the reconstruction used.

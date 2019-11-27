@@ -10,6 +10,7 @@ is available the code will be JITed for better performance.
    :maxdepth: 1
    :caption: Overview:
 
+   Differentiation routines <Derivatives>
    Reconstruction schemes <Reconstruction>
    Time steppers <TimeSteppers>
    Bibliography <Refs>
