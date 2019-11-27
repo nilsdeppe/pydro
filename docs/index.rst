@@ -11,6 +11,7 @@ is available the code will be JITed for better performance.
    :caption: Overview:
 
    Reconstruction schemes <Reconstruction>
+   Time steppers <TimeSteppers>
    Bibliography <Refs>
 
 Indices and tables

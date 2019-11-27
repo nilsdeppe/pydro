@@ -7,6 +7,31 @@ import Derivative
 
 
 class Rk3Ssp:
+    """
+    A third-order strong-stability-preserving nonlinear Runge-Kutta
+    time stepper :cite:`Hesthaven2007nodal`
+
+    Denoting the time derivative operator by :math:`\mathcal{L}`, the
+    stepper is given by
+
+    .. math::
+      \\begin{align}
+        v^{(1)} &=q^n+\Delta t \mathcal{L}(u^n, t^n) \\\\
+        v^{(2)} &= \\frac{1}{4}\\left[3q^n + v^{(1)} + \Delta t
+                   \mathcal{L}\\left(v^{(1)},
+                                     t^n + \Delta t\\right)\\right] \\\\
+        q^{n+1} &=\\frac{1}{3}\\left[q^n + 2 v^{(2)} + 2 \Delta t
+          \mathcal{L}\\left(v^{(2)},t^n + \\frac{1}{2}\Delta t
+          \\right)\\right]
+      \\end{align}
+
+    :param funcion time_deriv: The time derivative function which must be
+        invokable with two arguments, the evolved variables and the time.
+    :param list initial_state: A list of the values of the variables at
+        the initial time.
+    :param double time: Initial time.
+    """
+
     _compute_time_deriv = None
     _evolved_vars = None
     _time = None
@@ -18,15 +43,30 @@ class Rk3Ssp:
         self._time = initial_time
 
     def get_evolved_vars(self):
+        """
+        Returns an list of the evolved variables.
+        """
         return self._evolved_vars
 
     def get_time(self):
+        """
+        Returns the current time.
+        """
         return self._time
 
     def get_cfl_coefficient(self):
+        """
+        Returns the CFL factor required for stability.
+        """
         return self._cfl_coefficient
 
     def take_step(self, dt):
+        """
+        Take a time step.
+
+        :param double dt: The time step size to use already
+            including the CFL coefficient for the time stepper.
+        """
         dt_vars = self._compute_time_deriv(self._evolved_vars, self._time)
         v1 = self._evolved_vars + dt * dt_vars
         dt_vars = dt_vars = self._compute_time_deriv(v1, self._time + dt)
@@ -39,8 +79,39 @@ class Rk3Ssp:
 
 class Rk4Ssp:
     """
-    A fourth-order SSP nonlinear Runge-Kutta method.
+    A fourth-order strong-stability-preserving nonlinear Runge-Kutta
+    time stepper :cite:`Hesthaven2007nodal`
+
+    Denoting the time derivative operator by :math:`\mathcal{L}`, the
+    stepper is given by
+
+    .. math::
+      \\begin{align}
+        v^{(1)} &=q^n + 0.39175222700392 \Delta t \mathcal{L}(u^n,t^n) \\\\
+        v^{(2)} &= 0.44437049406734 q^n + 0.55562950593266 v^{(1)} \\\\
+                &+ 0.36841059262959 \Delta t \mathcal{L}\\left(
+                   v^{(1)}, t^n + 0.39175222700392 \Delta t \\right) \\\\
+        v^{(3)} &= 0.6201018513854 q^n + 0.3798981486146 v^{(2)} \\\\
+                &+ 0.25189177424738 \Delta t \mathcal{L}\\left(
+                   v^{(2)}, t^n + 0.5860796889678 \Delta t \\right) \\\\
+        v^{(4)} &= 0.17807995410773 q^n + 0.82192004589227 v^{(3)} \\\\
+                &+ 0.54497475021237 \Delta t \mathcal{L}\\left(
+                   v^{(3)}, t^n + 0.47454236302687 \Delta t \\right) \\\\
+        q^{n+1} &= 0.00683325884039 q^n + 0.51723167208978 v^{(2)} \\\\
+                &+ 0.12759831133288 v^{(3)} + 0.34833675773694 v^{(4)} \\\\
+                &+ 0.08460416338212 \Delta t \mathcal{L}\\left(
+                   v^{(3)}, t^n + 0.47454236302687 \Delta t \\right) \\\\
+                &+ 0.22600748319395 \Delta t \mathcal{L}\\left(
+                   v^{(4)}, t^n + 0.93501063100924 \Delta t \\right) \\\\
+      \\end{align}
+
+    :param funcion time_deriv: The time derivative function which must be
+        invokable with two arguments, the evolved variables and the time.
+    :param list initial_state: A list of the values of the variables at
+        the initial time.
+    :param double time: Initial time.
     """
+
     _compute_time_deriv = None
     _evolved_vars = None
     _time = None
@@ -52,31 +123,46 @@ class Rk4Ssp:
         self._time = initial_time
 
     def get_evolved_vars(self):
+        """
+        Returns an list of the evolved variables.
+        """
         return self._evolved_vars
 
     def get_time(self):
+        """
+        Returns the current time.
+        """
         return self._time
 
     def get_cfl_coefficient(self):
+        """
+        Returns the CFL factor required for stability.
+        """
         return self._cfl_coefficient
 
     def take_step(self, dt):
+        """
+        Take a time step.
+
+        :param double dt: The time step size to use already
+            including the CFL coefficient for the time stepper.
+        """
         k0 = self._compute_time_deriv(self._evolved_vars, self._time)
         v1 = self._evolved_vars + 0.39175222657189 * dt * k0
 
-        k1 = self._compute_time_deriv(v1, None)
+        k1 = self._compute_time_deriv(v1, self._time + 0.39175222700392 * dt)
         v2 = (0.444370493651235 * self._evolved_vars + 0.555629506348765 * v1 +
               0.368410593050371 * dt * k1)
 
-        k2 = self._compute_time_deriv(v2, None)
+        k2 = self._compute_time_deriv(v2, self._time + 0.5860796889678 * dt)
         v3 = (0.620101851488403 * self._evolved_vars + 0.379898148511597 * v2 +
               0.251891774271694 * dt * k2)
 
-        k3 = self._compute_time_deriv(v3, None)
+        k3 = self._compute_time_deriv(v3, self._time + 0.47454236302687 * dt)
         v4 = (0.178079954393132 * self._evolved_vars + 0.821920045606868 * v3 +
               0.544974750228521 * dt * k3)
 
-        k4 = self._compute_time_deriv(v4, None)
+        k4 = self._compute_time_deriv(v4, self._time + 0.93501063100924 * dt)
         self._evolved_vars = (0.517231671970585 * v2 + 0.096059710526147 * v3 +
                               0.063692468666290 * dt * k3 +
                               0.386708617503269 * v4 +
@@ -86,9 +172,18 @@ class Rk4Ssp:
 
 class LinearRk4Ssp:
     """
-    A fourth-order SSP linear Runge-Kutta method from
-    Strong Stability Preserving High Order Time Discretization Methods
-    by Gottlieb, Shu, and Tadmor
+    A fourth-order SSP linear Runge-Kutta method from :cite:`Gottlieb2001`
+
+    .. warning:: This time stepper is a linear method and should not
+        be used on nonlinear systems.
+
+    .. warning:: This time stepper passes `None` as the time.
+
+    :param funcion time_deriv: The time derivative function which must be
+        invokable with two arguments, the evolved variables and the time.
+    :param list initial_state: A list of the values of the variables at
+        the initial time.
+    :param double time: Initial time.
     """
     _compute_time_deriv = None
     _evolved_vars = None
@@ -101,25 +196,40 @@ class LinearRk4Ssp:
         self._time = initial_time
 
     def get_evolved_vars(self):
+        """
+        Returns an list of the evolved variables.
+        """
         return self._evolved_vars
 
     def get_time(self):
+        """
+        Returns the current time.
+        """
         return self._time
 
     def get_cfl_coefficient(self):
+        """
+        Returns the CFL factor required for stability.
+        """
         return self._cfl_coefficient
 
     def take_step(self, dt):
+        """
+        Take a time step.
+
+        :param double dt: The time step size to use already
+            including the CFL coefficient for the time stepper.
+        """
         k0 = self._compute_time_deriv(self._evolved_vars, self._time)
 
         v1 = self._evolved_vars + dt * k0
-        k1 = self._compute_time_deriv(v1, self._time)
+        k1 = self._compute_time_deriv(v1, None)
 
         v2 = v1 + dt * k1
-        k2 = self._compute_time_deriv(v2, self._time)
+        k2 = self._compute_time_deriv(v2, None)
 
         v3 = v2 + dt * k2
-        k3 = self._compute_time_deriv(v3, self._time)
+        k3 = self._compute_time_deriv(v3, None)
 
         self._evolved_vars = (0.375 * self._evolved_vars +
                               0.333333333333333333 * v1 + 0.25 * v2 +
@@ -130,9 +240,18 @@ class LinearRk4Ssp:
 
 class LinearRk6Ssp:
     """
-    A sixth-order SSP linear Runge-Kutta method from
-    Strong Stability Preserving High Order Time Discretization Methods
-    by Gottlieb, Shu, and Tadmor
+    A sixth-order SSP linear Runge-Kutta method from :cite:`Gottlieb2001`
+
+    .. warning:: This time stepper is a linear method and should not
+        be used on nonlinear systems.
+
+    .. warning:: This time stepper passes `None` as the time.
+
+    :param funcion time_deriv: The time derivative function which must be
+        invokable with two arguments, the evolved variables and the time.
+    :param list initial_state: A list of the values of the variables at
+        the initial time.
+    :param double time: Initial time.
     """
     _compute_time_deriv = None
     _evolved_vars = None
@@ -145,31 +264,46 @@ class LinearRk6Ssp:
         self._time = initial_time
 
     def get_evolved_vars(self):
+        """
+        Returns an list of the evolved variables.
+        """
         return self._evolved_vars
 
     def get_time(self):
+        """
+        Returns the current time.
+        """
         return self._time
 
     def get_cfl_coefficient(self):
+        """
+        Returns the CFL factor required for stability.
+        """
         return self._cfl_coefficient
 
     def take_step(self, dt):
+        """
+        Take a time step.
+
+        :param double dt: The time step size to use already
+            including the CFL coefficient for the time stepper.
+        """
         k0 = self._compute_time_deriv(self._evolved_vars, self._time)
 
         v1 = self._evolved_vars + dt * k0
-        k1 = self._compute_time_deriv(v1, self._time)
+        k1 = self._compute_time_deriv(v1, None)
 
         v2 = v1 + dt * k1
-        k2 = self._compute_time_deriv(v2, self._time)
+        k2 = self._compute_time_deriv(v2, None)
 
         v3 = v2 + dt * k2
-        k3 = self._compute_time_deriv(v3, self._time)
+        k3 = self._compute_time_deriv(v3, None)
 
         v4 = v3 + dt * k3
-        k4 = self._compute_time_deriv(v4, self._time)
+        k4 = self._compute_time_deriv(v4, None)
 
         v5 = v4 + dt * k4
-        k5 = self._compute_time_deriv(v5, self._time)
+        k5 = self._compute_time_deriv(v5, None)
 
         self._evolved_vars = (0.3680555555555556 * self._evolved_vars +
                               0.36666666666666664 * v1 + 0.1875 * v2 +
@@ -182,9 +316,18 @@ class LinearRk6Ssp:
 
 class LinearRk8Ssp:
     """
-    A eighth-order SSP linear Runge-Kutta method from
-    Strong Stability Preserving High Order Time Discretization Methods
-    by Gottlieb, Shu, and Tadmor
+    A eighth-order SSP linear Runge-Kutta method from :cite:`Gottlieb2001`
+
+    .. warning:: This time stepper is a linear method and should not
+        be used on nonlinear systems.
+
+    .. warning:: This time stepper passes `None` as the time.
+
+    :param funcion time_deriv: The time derivative function which must be
+        invokable with two arguments, the evolved variables and the time.
+    :param list initial_state: A list of the values of the variables at
+        the initial time.
+    :param double time: Initial time.
     """
     _compute_time_deriv = None
     _evolved_vars = None
@@ -197,15 +340,30 @@ class LinearRk8Ssp:
         self._time = initial_time
 
     def get_evolved_vars(self):
+        """
+        Returns an list of the evolved variables.
+        """
         return self._evolved_vars
 
     def get_time(self):
+        """
+        Returns the current time.
+        """
         return self._time
 
     def get_cfl_coefficient(self):
+        """
+        Returns the CFL factor required for stability.
+        """
         return self._cfl_coefficient
 
     def take_step(self, dt):
+        """
+        Take a time step.
+
+        :param double dt: The time step size to use already
+            including the CFL coefficient for the time stepper.
+        """
         k0 = self._compute_time_deriv(self._evolved_vars, self._time)
 
         v1 = self._evolved_vars + dt * k0
