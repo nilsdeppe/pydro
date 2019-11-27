@@ -28,12 +28,32 @@ class _ScalarFormatterForceFormat(mtick.ScalarFormatter):
 def generate_plot_with_reference(x,
                                  x_ref,
                                  func,
-                                 reference,
+                                 reference_solution,
                                  quantity_name,
                                  file_name,
                                  ref_label,
                                  every_n=0,
                                  set_log_y=False):
+    """
+    Generate a plot of a snapshot from a 1d simulation and write it to disk.
+
+    :param list x: The x-coordinates on which `func` is defined.
+    :param list x_ref: The x-coordinates on which `reference_solution`
+        is defined.
+    :param list func: The function/variable to plot.
+    :param list reference_solution: The reference solution to plot.
+    :param str quantity_name: The label for the function/variable being
+        plotted.
+    :param str file_name: The name of the file to write.
+    :param str ref_label: The reference label. Typically either
+        'Exact' or 'Reference' depending on whether the reference solution
+        is an exact analytic solution or obtained from a high-resolution
+        simulation.
+    :param int every_n: If non-zero only plot every nth grid point in
+        `func`.
+    :param bool set_log_y: If `True` then the y-axis is plotted on a log
+        scale.
+    """
     if every_n == 0:
         every_n = len(x) // 50
     plt.clf()
@@ -53,7 +73,11 @@ def generate_plot_with_reference(x,
             markersize=markersize,
             label="Numerical")
     if quantity_name != "Local Order":
-        ax.plot(x_ref, reference, '-', linewidth=linewidth, label=ref_label)
+        ax.plot(x_ref,
+                reference_solution,
+                '-',
+                linewidth=linewidth,
+                label=ref_label)
 
     ax.tick_params(axis='both', which='major', labelsize=fontsize - 4)
     ax.set_xlim(x[0], x[-1])
@@ -90,6 +114,31 @@ def generate_spacetime_plot(file_name,
                             vmax=None,
                             time_max_elements=100,
                             x_max_elements=200):
+    """
+    Generate a spacetime plot from a 1d simulation and write it to disk.
+
+    :param str file_name: The name of the file to write.
+    :param list var: A list of the variable/function to plot at each time.
+       The data must be in the same order as the `times` argument.
+    :param str var_name: The name of the variable being plotted.
+    :param list x: The x-coordinates on which `var` is defined. Assumed
+        to be time-independent.
+    :param list times: A list of the times at which data was recorded
+        during the evolution.
+    :param bool smoothen: If `True` applies a `gouraud` smoothening to
+        the data during rendering.
+    :param bool set_log_y: If `True` then the log of `var` is plotted.
+    :param double vmin: If specified sets the lower limit of the range
+        for plotting `var`.
+    :param double vmax: If specified sets the upper limit of the range
+        for plotting `var`.
+    :param int time_max_elements: The maximum number of cells to plot
+        in time. Increasing this increases the temporal resolution but
+        makes the generated images larger and more expensive to render.
+    :param int x_max_elements: The maximum number of cells to plot
+        in space. Increasing this increases the temporal resolution but
+        makes the generated images larger and more expensive to render.
+    """
     print(
         "Generating spacetime plot. This might take a minute. Please be patient."
     )

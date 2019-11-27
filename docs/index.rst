@@ -11,6 +11,7 @@ is available the code will be JITed for better performance.
    :caption: Overview:
 
    Differentiation routines <Derivatives>
+   Plotting 1d simulation results <Plot1d>
    Reconstruction schemes <Reconstruction>
    Time steppers <TimeSteppers>
    Bibliography <Refs>
