@@ -78,6 +78,11 @@ class NewtonianEuler1d:
         """
         return self._dx
 
+    @staticmethod
+    def compute_sound_speed(conserved_vars):
+        return ne.compute_sound_speed(conserved_vars[0],
+                                      ne.compute_pressure(*conserved_vars))
+
     def _extend_for_boundary_conditions(self, variables):
         """
         Extend the variables numpy matrix (rows is variables, columns
@@ -284,10 +289,8 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
     while stepper.get_time() <= final_time:
         mass_density, momentum_density, energy_density = stepper.get_evolved_vars(
         )
-        sound_speed = ne.compute_sound_speed(
-            mass_density,
-            ne.compute_pressure(mass_density, momentum_density,
-                                energy_density))
+        sound_speed = ne1d_solver.compute_sound_speed(
+            stepper.get_evolved_vars())
         speed = np.amax(np.abs(momentum_density / mass_density) + sound_speed)
         dt = cfl * stepper.get_cfl_coefficient() * ne1d_solver.get_dx() / speed
         if stepper.get_time() + dt > final_time:
