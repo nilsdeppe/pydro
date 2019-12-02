@@ -16,6 +16,7 @@ import Derivative
 import NewtonianEuler as ne
 import SedovSolution as sedov
 import Plotting as plot
+import LaneEmden1d
 
 ################################################################
 # Configuration:
@@ -272,9 +273,14 @@ def do_solve(num_cells, problem, cfl, reconstructor, reconstruction_scheme,
         momentum_density, energy_density = ne.set_initial_data(
             num_cells, problem)
 
-    ne1d_solver = NewtonianEuler1d(reconstruct_prims, x, boundary_conditions,
-                                   reconstructor, reconstruction_scheme,
-                                   deriv_scheme)
+    if problem == ne.InitialData.LaneEmden:
+        ne1d_solver = LaneEmden1d.NewtonianEuler1dLaneEmden(
+            reconstruct_prims, x, boundary_conditions, reconstructor,
+            reconstruction_scheme, deriv_scheme)
+    else:
+        ne1d_solver = NewtonianEuler1d(reconstruct_prims, x,
+                                       boundary_conditions, reconstructor,
+                                       reconstruction_scheme, deriv_scheme)
 
     stepper = TimeStepper.Rk4Ssp(
         ne1d_solver,

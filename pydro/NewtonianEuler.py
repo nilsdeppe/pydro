@@ -228,7 +228,6 @@ def set_initial_data(num_points, initial_data):
     elif initial_data == InitialData.LaneEmden:
         set_gamma(2.0)
         set_symmetry(Symmetry.Spherical)
-        # x = create_grid(1.5, 4.0, num_points)
         x = create_grid(0.0, 2.0 * np.pi, num_points)
 
         initial_time = 0.0
