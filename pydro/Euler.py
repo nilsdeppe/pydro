@@ -495,7 +495,7 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
                 str(problem).replace("InitialData.", '') + str(num_cells) +
                 "SpacetimeDensityError.pdf",
                 spacetime_history[0],
-                r"$\lvert\rho-\rho_{\mathrm{exact}}\rvert$",
+                r"$|\rho-\rho_{\mathrm{exact}}|$",
                 x,
                 times,
                 vmin=-7,
