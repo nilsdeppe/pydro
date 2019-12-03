@@ -38,7 +38,7 @@ class NewtonianEuler1dLaneEmden:
     _x_faces = None
 
     _boundary_conditions = None
-    _buffer_size = 9 * 2
+    _buffer_size = None
 
     _reconstructor = None
     _reconstruction_scheme = None
@@ -48,6 +48,15 @@ class NewtonianEuler1dLaneEmden:
 
     def __init__(self, reconstruct_prims, x, boundary_conditions,
                  reconstructor, reconstruction_scheme, deriv_scheme):
+        if len(x) < 100:
+            raise ValueError(
+                "The size of the x array must be at least 100 but is %d" %
+                len(x))
+        if len(x) % 100 == 0:
+            raise ValueError(
+                "The size of the x array must be a multiple of 100 but is %d" %
+                len(x))
+
         self._reconstruct_prims = reconstruct_prims
 
         self._x = np.copy(x)
@@ -55,6 +64,8 @@ class NewtonianEuler1dLaneEmden:
         self._x_faces = np.arange(0, len(self._x) + 1, 1) * self._dx
 
         self._boundary_conditions = boundary_conditions
+
+        self._buffer_size = 9 * (len(x) / 100)
 
         self._reconstructor = reconstructor
         self._reconstruction_scheme = reconstruction_scheme

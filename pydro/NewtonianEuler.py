@@ -231,7 +231,9 @@ def set_initial_data(num_points, initial_data):
         x = create_grid(0.0, 2.0 * np.pi, num_points)
 
         initial_time = 0.0
-        final_time = 100.0
+        # The sound speed is ~2/3 in the star, so it takes a time of ~ 1.5 pi
+        # for one sound crossing time from r=0 to r=pi.
+        final_time = 1.5 * np.pi * 1000.0
 
         star_mask = np.abs(x) < np.pi - 1.0e-19
 
