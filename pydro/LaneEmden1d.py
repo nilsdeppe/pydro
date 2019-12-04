@@ -11,7 +11,7 @@ except:
 
 import Reconstruction as recons
 import Derivative
-import NewtonianEuler as ne
+import NewtonianEuler1d as ne
 
 
 def _apply_mask_recons_prim_impl(density, velocity, mask, atmosphere_density):

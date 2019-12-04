@@ -13,7 +13,7 @@ except:
 import Derivative
 import Euler1dPpao as ppao
 import LaneEmden1d
-import NewtonianEuler as ne
+import NewtonianEuler1d as ne
 import Plotting as plot
 import Reconstruction as recons
 import SedovSolution as sedov
