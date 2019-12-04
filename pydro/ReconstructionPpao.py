@@ -309,11 +309,11 @@ def _adaptive_order_weno3_robust(q,
                                  j,
                                  recons,
                                  keep_positive,
-                                 eps=1.0e-45,
+                                 eps=1.0e-17,
                                  c1=1.0,
-                                 c2=1.0e5,
+                                 c2=1.0e3,
                                  c3=1.0,
-                                 exponent=1.0,
+                                 exponent=4,
                                  wenoz=False):
     """
     A robust WENO3 reconstruction using 5 points.
@@ -355,8 +355,8 @@ def _adaptive_order_weno3_robust(q,
     where :math:`p` is usually chosen to be 4 or 8, and :math:`\\lambda_0=1`,
     :math:`\\lambda_1=10^5`, and :math:`\\lambda_2=1`.
 
-    In the case where the WENOZ weights are used :math:`p=1` and the
-    new oscillation indicators are
+    To obtain the WENOZ weights use :math:`p=1` and with the new oscillation
+    indicators
 
     .. math::
       \\beta_k^Z=\\frac{\\beta_k}{\\beta_k + \\tau_5 + \\epsilon_k}
@@ -389,16 +389,13 @@ def _adaptive_order_weno3_robust(q,
     :param double c2: The linear weight :math:`\\lambda_{2}`.
 
     :param double exponent: The exponent :math:`p` in denominator of the
-        :math:`\\alpha_k`. Set to 1 when using WENOZ weights.
+        :math:`\\alpha_k`.
 
     :param bool wenoz: If `True` then use the WENOZ weights.
 
     :return: (`bool`) `True` if the reconstruction was successful, otherwise
         `False`
     """
-
-    if wenoz:
-        exponent = 1
 
     s1_ux = -2.0 * q[j - 1] + 0.5 * q[j - 2] + 1.5 * q[j]
     s1_ux2 = 0.5 * (q[j - 2] - 2.0 * q[j - 1] + q[j])
