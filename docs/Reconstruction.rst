@@ -3,10 +3,9 @@ Reconstruction Schemes
 
 Pydro provides two variants of reconstruction schemes. The first
 are the standard reconstruction schemes including TVD and WENO-type
-schemes, while the second (not yet available) are positivity-preserving
-adaptive-order schemes. The two scheme classes have different interfaces and so
-must be used slightly differently. The interface for each is documented in the
-sections below.
+schemes, while the second are positivity-preserving adaptive-order schemes. The
+two scheme classes have different interfaces and so must be used slightly
+differently. The interface for each is documented in the sections below.
 
 Standard reconstruction
 -----------------------
@@ -21,4 +20,14 @@ series of variables using one of the available schemes
 
 
 .. automodule:: Reconstruction
+   :members:
+
+Positivity-preserving reconstruction
+------------------------------------
+
+The PPAO schemes need to be wrapped in a function specific for each
+evolution system so that the appropriate variables can have their
+positivity preserved.
+
+.. automodule:: ReconstructionPpao
    :members:
