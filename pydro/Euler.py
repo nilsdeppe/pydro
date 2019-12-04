@@ -10,13 +10,14 @@ try:
 except:
     use_numba = False
 
-import Reconstruction as recons
-import TimeStepper
 import Derivative
-import NewtonianEuler as ne
-import SedovSolution as sedov
-import Plotting as plot
+import Euler1dPpao as ppao
 import LaneEmden1d
+import NewtonianEuler as ne
+import Plotting as plot
+import Reconstruction as recons
+import SedovSolution as sedov
+import TimeStepper
 
 ################################################################
 # Configuration:
