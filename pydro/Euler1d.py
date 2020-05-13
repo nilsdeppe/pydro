@@ -113,13 +113,15 @@ class NewtonianEuler1d:
         # Check lower side for periodic BCs
         if self._boundary_conditions[0] == ne.BoundaryCondition.Periodic:
             for i in range(variables.shape[0]):
-                new_vars[i, 0:self.
-                         _buffer_size] = variables[i, -self._buffer_size:]
+                new_vars[i,
+                         0:self._buffer_size] = variables[i,
+                                                          -self._buffer_size:]
         # Check upper side for periodic BCs
         if self._boundary_conditions[1] == ne.BoundaryCondition.Periodic:
             for i in range(variables.shape[0]):
-                new_vars[i, -self._buffer_size:] = variables[i, 0:self.
-                                                             _buffer_size]
+                new_vars[i,
+                         -self._buffer_size:] = variables[i,
+                                                          0:self._buffer_size]
 
         # Check lower side for reflecting BCs
         if self._boundary_conditions[0] == ne.BoundaryCondition.Reflecting:
