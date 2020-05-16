@@ -300,8 +300,9 @@ def _adaptive_order_3(q, i, j, recons, keep_positive, alpha=3.0, eps=1.0e-36):
         `False`
     """
     norm_top = 0.4 * (0.75 * q[j + 1] - 1.5 * q[j] + 0.75 * q[j - 1])**2
-    norm_full = (0.5303300858899106 * q[j + 1] +
-                 0.5303300858899106 * q[j - 1] + 0.35355339059327373 * q[j])**2
+    norm_full = q[j + 1] * (0.88125 * q[j + 1] + 0.2625 * q[j - 1] - 0.525 *
+                            q[j]) + q[j - 1] * (0.88125 * q[j - 1] -
+                                                0.525 * q[j]) + 1.025 * q[j]**2
 
     sensor = 0.5 * np.log10(norm_top / (norm_full + eps))
     if sensor < -alpha * np.log10(alpha):
