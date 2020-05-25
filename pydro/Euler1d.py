@@ -475,6 +475,27 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
         str(problem).replace("InitialData.", '') + str(num_cells) +
         "Order.pdf", exact_or_ref_plot_label, every_n)
 
+    if problem == ne.InitialData.ShuOsher:
+        # Plot a zoom in of the density
+        x_zoom = []
+        mass_density_zoom = []
+        for i in range(len(x)):
+            if x[i] >= 0.5 and x[i] <= 2.5:
+                x_zoom.append(x[i])
+                mass_density_zoom.append(mass_density[i])
+        plot.generate_plot_with_reference(
+            x_zoom,
+            x_ref,
+            mass_density_zoom,
+            mass_density_ref,
+            "Density",
+            str(problem).replace("InitialData.", '') + str(num_cells) +
+            "DensityZoom.pdf",
+            exact_or_ref_plot_label,
+            every_n,
+            set_log_y=(problem == ne.InitialData.LeBlanc
+                       or problem == ne.InitialData.LaneEmden))
+
     if generate_spacetime_plots:
         spacetime_history[-1][spacetime_history[-1] > 10] = 9
         plot.generate_spacetime_plot(str(problem).replace("InitialData.", '') +
