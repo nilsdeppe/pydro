@@ -54,6 +54,7 @@ class InitialData(enum.IntEnum):
     Severe4 = enum.auto()
     Severe5 = enum.auto()
     ShuOsher = enum.auto()
+    ShuOsher2 = enum.auto()
     Sinusoid = enum.auto()
     Strong = enum.auto()
 
@@ -164,7 +165,9 @@ def is_riemann_problem(problem):
     """
     Returns true if `problem` is a Riemann problem
     """
-    return (problem != InitialData.ShuOsher and problem != InitialData.Sedov
+    return (problem != InitialData.ShuOsher
+            and problem != InitialData.ShuOsher2
+            and problem != InitialData.Sedov
             and problem != InitialData.Sinusoid
             and problem != InitialData.InteractingBlastWaves
             and problem != InitialData.LaneEmden)
@@ -254,6 +257,27 @@ def set_initial_data(num_points, initial_data):
         x = create_grid(-5.0, 5.0, num_points)
         jump_mask = x > discontinuity_location - 1.0e-10
         final_time = 1.8
+
+        initial_time = 0.0
+        mass_density = np.full(len(x), 3.857143)
+        mass_density[jump_mask] = 1.0 + 0.2 * np.sin(5.0 * x[jump_mask])
+
+        pressure = np.full(len(x), 10.33333)
+        pressure[jump_mask] = 1.0
+
+        velocity = np.full(len(x), 2.629369)
+        velocity[jump_mask] = 0.0
+
+        boundary_condition = [
+            BoundaryCondition.Constant, BoundaryCondition.Constant
+        ]
+    elif initial_data == InitialData.ShuOsher2:
+        set_gamma(1.4)
+        set_symmetry(Symmetry.No)
+        discontinuity_location = -4.0
+        x = create_grid(-5.0, 15.0, num_points)
+        jump_mask = x > discontinuity_location - 1.0e-10
+        final_time = 4.8
 
         initial_time = 0.0
         mass_density = np.full(len(x), 3.857143)

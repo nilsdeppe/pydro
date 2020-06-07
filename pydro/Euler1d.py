@@ -369,6 +369,22 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
                                            momentum_density_ref,
                                            energy_density_ref)
         exact_or_ref_plot_label = "Reference"
+    elif problem == ne.InitialData.ShuOsher2:
+        # Compute reference solution for Shu osher
+        num_cells_original = num_cells
+        num_cells = 10000
+        _, x_ref, _, mass_density_ref, momentum_density_ref, \
+            energy_density_ref, _, _ = do_solve(num_cells, problem, cfl,
+                                                recons.reconstruct,
+                                                recons.Scheme.Wcns3,
+                                                Derivative.Scheme.MD,
+                                                generate_spacetime_plots)
+        num_cells = num_cells_original
+        velocity_ref = momentum_density_ref / mass_density_ref
+        pressure_ref = ne.compute_pressure(mass_density_ref,
+                                           momentum_density_ref,
+                                           energy_density_ref)
+        exact_or_ref_plot_label = "Reference"
     elif problem == ne.InitialData.InteractingBlastWaves:
         # Compute reference solution for interacting blast waves
         print("Generating high-resolution reference solution. "
@@ -475,12 +491,14 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
         str(problem).replace("InitialData.", '') + str(num_cells) +
         "Order.pdf", exact_or_ref_plot_label, every_n)
 
-    if problem == ne.InitialData.ShuOsher:
+    if problem == ne.InitialData.ShuOsher or problem == ne.InitialData.ShuOsher2:
         # Plot a zoom in of the density
         x_zoom = []
         mass_density_zoom = []
+        lower = 0.5 if problem == ne.InitialData.ShuOsher else 8.5
+        upper = 2.5 if problem == ne.InitialData.ShuOsher else 12.5
         for i in range(len(x)):
-            if x[i] >= 0.5 and x[i] <= 2.5:
+            if x[i] >= lower and x[i] <= upper:
                 x_zoom.append(x[i])
                 mass_density_zoom.append(mass_density[i])
         plot.generate_plot_with_reference(
@@ -551,6 +569,7 @@ def parse_args():
         "  Sod: 200\n"
         "  Lax: 200\n"
         "  ShuOsher: 400\n"
+        "  ShuOsher2: 800\n"
         "  Severe*: 200\n"
         "  1-2-3 problem: 400\n"
         "  Interacting blast waves: 400\n"
