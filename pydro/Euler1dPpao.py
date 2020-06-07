@@ -172,21 +172,13 @@ def _ppao31(primitive_vars, reconstruction_scheme, order_used):
     recons_mass_density = np.zeros(2 * len(mass_density) + 2)
     recons_velocity = np.zeros(2 * len(mass_density) + 2)
     recons_pressure = np.zeros(2 * len(mass_density) + 2)
-    q = np.zeros(9)
-    j = 4
+    q = np.zeros(3)
+    j = 1
 
     for i in range(j, len(mass_density) - j):
-        q[0] = mass_density[i - 4]
-        q[1] = mass_density[i - 3]
-        q[2] = mass_density[i - 2]
-        q[3] = mass_density[i - 1]
-        q[4] = mass_density[i]
-        q[5] = mass_density[i + 1]
-        q[6] = mass_density[i + 2]
-        q[7] = mass_density[i + 3]
-        q[8] = mass_density[i + 4]
-
         # Reconstruct mass density, ensuring positivity
+        for k in range(-j, j + 1):
+            q[k + j] = mass_density[i + k]
         order_used[i] = min(order_used[i], 3)
         successful_reconstruction = recons.adaptive_order_wcns3z(
             q, i, j, recons_mass_density, keep_positive=True)
@@ -195,15 +187,8 @@ def _ppao31(primitive_vars, reconstruction_scheme, order_used):
             recons.adaptive_order_1(q, i, j, recons_mass_density)
 
         # Reconstruct pressure
-        q[0] = pressure[i - 4]
-        q[1] = pressure[i - 3]
-        q[2] = pressure[i - 2]
-        q[3] = pressure[i - 1]
-        q[4] = pressure[i]
-        q[5] = pressure[i + 1]
-        q[6] = pressure[i + 2]
-        q[7] = pressure[i + 3]
-        q[8] = pressure[i + 4]
+        for k in range(-j, j + 1):
+            q[k + j] = pressure[i + k]
         order_used[i] = min(order_used[i], 3)
         successful_reconstruction = recons.adaptive_order_wcns3z(
             q, i, j, recons_pressure, keep_positive=True)
@@ -212,15 +197,8 @@ def _ppao31(primitive_vars, reconstruction_scheme, order_used):
             recons.adaptive_order_1(q, i, j, recons_pressure)
 
         # Reconstruct velocity
-        q[0] = velocity[i - 4]
-        q[1] = velocity[i - 3]
-        q[2] = velocity[i - 2]
-        q[3] = velocity[i - 1]
-        q[4] = velocity[i]
-        q[5] = velocity[i + 1]
-        q[6] = velocity[i + 2]
-        q[7] = velocity[i + 3]
-        q[8] = velocity[i + 4]
+        for k in range(-j, j + 1):
+            q[k + j] = velocity[i + k]
         order_used[i] = min(order_used[i], 3)
         successful_reconstruction = recons.adaptive_order_wcns3z(
             q, i, j, recons_velocity, keep_positive=False)
