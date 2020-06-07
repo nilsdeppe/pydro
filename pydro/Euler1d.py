@@ -377,8 +377,8 @@ def main(problem, num_cells, numerical_flux, cfl, generate_spacetime_plots):
         num_cells = 5000
         _, x_ref, _, mass_density_ref, momentum_density_ref, \
             energy_density_ref, _, _ = do_solve(num_cells, problem, cfl,
-                                                recons.reconstruct,
-                                                recons.Scheme.Wcns3,
+                                                ppao.ppao31,
+                                                None,
                                                 Derivative.Scheme.MD,
                                                 generate_spacetime_plots)
         num_cells = num_cells_original
