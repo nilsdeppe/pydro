@@ -435,6 +435,8 @@ def _hll_helper(v_p_cs, v_m_cs, mass_f, momentum_f, energy_f,
         max_speed = max(max(v_p_cs[2 * i + 1], v_p_cs[2 * i]), 0.0)
         min_speed = min(min(v_m_cs[2 * i + 1], v_m_cs[2 * i]), 0.0)
         speed_diff = max_speed - min_speed
+        if speed_diff == 0.0:
+            continue
         nf_mass[i] = (-min_speed * mass_f[2 * i + 1] + max_speed *
                       mass_f[2 * i]) / speed_diff + max_speed * min_speed * (
                           reconstructed_mass_density[2 * i + 1] -
